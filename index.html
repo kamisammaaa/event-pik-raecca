@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RAECCA POS & Live Reporting Ecosystem - Curved Counter L, PIK</title>
   <link rel="icon" type="image/png" href="/images.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#E85D75">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -51,6 +53,9 @@
           </button>
         </div>
       </div>
+      <button class="btn-blind-closing" id="btnOpenBlindClosing" title="Tutup Shift Kasir Tanpa Lihat Omzet (Anti-Fraud)">
+        🔒 Blind Shift Closing
+      </button>
       <button class="btn-eod-quick" id="quickEodBtn" title="Buka Panel Laporan Closing 22.00 WIB">
         📋 Daily Closing
       </button>
@@ -120,6 +125,24 @@
               <div class="empty-icon">🛍️</div>
               <p>Belum ada produk dipilih</p>
               <small>Klik produk di sebelah kiri atau gunakan pemindai barcode USB untuk memulai transaksi.</small>
+            </div>
+          </div>
+
+          <!-- Smart Upselling Banner -->
+          <div class="cart-upsell-box" id="cartUpsellBox" style="display: none;">
+            <div class="upsell-badge">💡 REKOMENDASI UPSELL KASIR</div>
+            <div class="upsell-content">
+              <span id="upsellText">Tawarkan Bundling Duo Lippie Hero (Tambah Rp 50.000 hemat Rp 15.000)!</span>
+              <button class="btn-apply-upsell" id="btnApplyUpsell">Upgrade ke Bundle</button>
+            </div>
+          </div>
+
+          <!-- Customer WhatsApp & CRM Input -->
+          <div class="customer-crm-box">
+            <label for="customerPhoneInput" class="crm-label">📱 WhatsApp Pembeli (e-Receipt & Loyalty):</label>
+            <div class="crm-input-wrap">
+              <span class="phone-prefix">+62</span>
+              <input type="tel" id="customerPhoneInput" class="crm-input font-mono" placeholder="812-XXXX-XXXX" maxlength="15">
             </div>
           </div>
 
@@ -793,6 +816,141 @@
                 🖨️ Cetak Lembar EOD PDF
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: BLIND SHIFT CLOSING (REKONSILIASI KAS FISIK ANTI-FRAUD) -->
+  <div class="modal-backdrop" id="modalBlindClosing" style="display: none;">
+    <div class="modal-box modal-blind-box">
+      <div class="modal-header">
+        <div>
+          <h3>🔒 Tutup Kasir Buta (Blind Shift Closing)</h3>
+          <p class="modal-sub">Standar Audit: Kasir menghitung fisik uang tanpa melihat angka sistem untuk mencegah manipulasi</p>
+        </div>
+        <button class="modal-close-btn" id="btnCloseBlindModal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Step 1: Input Lembar Pecahan Uang -->
+        <div id="blindStepInput">
+          <div class="blind-notice-box">
+            💵 <strong>INSTRUKSI KASIR:</strong> Buka laci kasir sekarang. Hitung jumlah lembar uang fisik per pecahan berikut. Nilai total uang di sistem disembunyikan sampai Anda selesai menginput.
+          </div>
+
+          <div class="denom-grid">
+            <div class="denom-row">
+              <span class="denom-label">Rp 100.000</span>
+              <div class="denom-input-wrap">
+                <input type="number" min="0" class="form-input denom-qty font-mono" id="denom_100k" placeholder="0" data-multiplier="100000">
+                <span class="denom-unit">lembar</span>
+              </div>
+              <span class="denom-subtotal font-mono" id="subtotal_100k">Rp 0</span>
+            </div>
+
+            <div class="denom-row">
+              <span class="denom-label">Rp 50.000</span>
+              <div class="denom-input-wrap">
+                <input type="number" min="0" class="form-input denom-qty font-mono" id="denom_50k" placeholder="0" data-multiplier="50000">
+                <span class="denom-unit">lembar</span>
+              </div>
+              <span class="denom-subtotal font-mono" id="subtotal_50k">Rp 0</span>
+            </div>
+
+            <div class="denom-row">
+              <span class="denom-label">Rp 20.000</span>
+              <div class="denom-input-wrap">
+                <input type="number" min="0" class="form-input denom-qty font-mono" id="denom_20k" placeholder="0" data-multiplier="20000">
+                <span class="denom-unit">lembar</span>
+              </div>
+              <span class="denom-subtotal font-mono" id="subtotal_20k">Rp 0</span>
+            </div>
+
+            <div class="denom-row">
+              <span class="denom-label">Rp 10.000</span>
+              <div class="denom-input-wrap">
+                <input type="number" min="0" class="form-input denom-qty font-mono" id="denom_10k" placeholder="0" data-multiplier="10000">
+                <span class="denom-unit">lembar</span>
+              </div>
+              <span class="denom-subtotal font-mono" id="subtotal_10k">Rp 0</span>
+            </div>
+
+            <div class="denom-row">
+              <span class="denom-label">Rp 5.000</span>
+              <div class="denom-input-wrap">
+                <input type="number" min="0" class="form-input denom-qty font-mono" id="denom_5k" placeholder="0" data-multiplier="5000">
+                <span class="denom-unit">lembar</span>
+              </div>
+              <span class="denom-subtotal font-mono" id="subtotal_5k">Rp 0</span>
+            </div>
+
+            <div class="denom-row">
+              <span class="denom-label">Rp 2.000 & Koin</span>
+              <div class="denom-input-wrap">
+                <input type="number" min="0" class="form-input denom-qty font-mono" id="denom_small" placeholder="0" data-multiplier="1">
+                <span class="denom-unit">rupiah</span>
+              </div>
+              <span class="denom-subtotal font-mono" id="subtotal_small">Rp 0</span>
+            </div>
+          </div>
+
+          <div class="blind-total-preview">
+            <span>Total Uang Fisik Terhitung di Laci:</span>
+            <strong id="blindDrawerTotal" class="font-mono text-gradient-primary">Rp 0</strong>
+          </div>
+
+          <div class="form-group" style="margin-top: 14px;">
+            <label>Modal Awal Kasir (Petty Cash Float):</label>
+            <input type="number" id="blindPettyCash" class="form-input font-mono" value="500000">
+            <small>Uang modal kembalian awal shift yang wajib dikembalikan ke brankas/kantong kasir.</small>
+          </div>
+
+          <button class="btn-action-primary btn-full" id="btnSubmitBlindCount" style="margin-top: 14px;">
+            🔍 Finalisasi & Buka Hasil Rekonsiliasi Sistem
+          </button>
+        </div>
+
+        <!-- Step 2: Hasil Rekonsiliasi (Revealed after counting) -->
+        <div id="blindStepResult" style="display: none;">
+          <div class="reconcile-result-card" id="reconcileStatusCard">
+            <div class="reconcile-status-badge" id="reconcileBadge">
+              BALANCED (SESUAI)
+            </div>
+            <div class="reconcile-variance font-mono" id="reconcileVarianceText">
+              Selisih: Rp 0
+            </div>
+            <p id="reconcileDesc">Uang fisik tunai kasir 100% cocok dengan rekapan transaksi sistem POS.</p>
+          </div>
+
+          <div class="reconcile-comparison-table">
+            <div class="comp-row">
+              <span>Total Uang Fisik Laci:</span>
+              <strong id="compDrawerPhysical" class="font-mono">Rp 0</strong>
+            </div>
+            <div class="comp-row">
+              <span>Potongan Modal Awal (Petty Cash):</span>
+              <span id="compPettyCash" class="font-mono">- Rp 500.000</span>
+            </div>
+            <div class="comp-row highlight">
+              <span>Setoran Kas Bersih Kasir:</span>
+              <strong id="compNetPhysicalDeposit" class="font-mono text-gradient-primary">Rp 0</strong>
+            </div>
+            <div class="comp-row">
+              <span>Penjualan Tunai di Sistem POS:</span>
+              <strong id="compSystemCash" class="font-mono">Rp 0</strong>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 14px;">
+            <label>Catatan / Alasan Kasir (Opsional):</label>
+            <input type="text" id="blindNotesInput" class="form-input" placeholder="Semua uang tunai telah dihitung rapi dan diserahkan ke SPV.">
+          </div>
+
+          <div class="modal-footer" style="padding: 14px 0 0 0; background: transparent; border: none;">
+            <button class="btn-action-secondary" id="btnRecountBlind">🔄 Hitung Ulang</button>
+            <button class="btn-action-primary" id="btnPrintBeritaAcara">🖨️ Cetak Berita Acara Rekonsiliasi</button>
           </div>
         </div>
       </div>

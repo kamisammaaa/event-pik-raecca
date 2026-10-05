@@ -523,6 +523,44 @@ function renderCart() {
   });
 
   payBtn.disabled = false;
+  checkSmartUpsell();
+}
+
+function checkSmartUpsell() {
+  const upsellBox = document.getElementById('cartUpsellBox');
+  const upsellText = document.getElementById('upsellText');
+  const applyBtn = document.getElementById('btnApplyUpsell');
+  if (!upsellBox) return;
+
+  if (state.cart.length === 0) {
+    upsellBox.style.display = 'none';
+    return;
+  }
+
+  const hasSerum = state.cart.some(i => i.product.id === 'RC-001');
+  const hasBundleHero = state.cart.some(i => i.product.id === 'RC-008');
+  const hasJelly = state.cart.some(i => i.product.id === 'RC-004');
+  const hasBundleGlow = state.cart.some(i => i.product.id === 'RC-009');
+
+  if (hasSerum && !hasBundleHero) {
+    upsellBox.style.display = 'flex';
+    upsellText.textContent = 'Pelanggan membeli Lippie Serum, tawarkan Bundling Duo Lippie Hero (Tambah Rp 50.000 hemat Rp 15.000)!';
+    applyBtn.onclick = () => {
+      updateCartQty('RC-001', -1);
+      addToCart('RC-008');
+      showToast('🎉 Berhasil upgrade ke Paket Promo Duo Lippie Hero!', 'success');
+    };
+  } else if (hasJelly && !hasBundleGlow) {
+    upsellBox.style.display = 'flex';
+    upsellText.textContent = 'Pelanggan membeli Jelly Mask, tawarkan Bundling Glow Up Set (+ Body Lotion hemat Rp 21.000)!';
+    applyBtn.onclick = () => {
+      updateCartQty('RC-004', -1);
+      addToCart('RC-009');
+      showToast('🎉 Berhasil upgrade ke Paket Promo Glow Up Set!', 'success');
+    };
+  } else {
+    upsellBox.style.display = 'none';
+  }
 }
 
 // --- 6. CHECKOUT & PAYMENT FLOWS ---
@@ -597,6 +635,11 @@ function completeTransaction(paymentMethod, metadata = {}) {
     }
   });
 
+  const customerPhoneRaw = document.getElementById('customerPhoneInput')?.value.trim() || '';
+  const customerPhone = customerPhoneRaw ? `+62 ${customerPhoneRaw}` : null;
+  const phoneInp = document.getElementById('customerPhoneInput');
+  if (phoneInp) phoneInp.value = '';
+
   const txRecord = {
     id: invoiceId,
     time: timeStr,
@@ -610,9 +653,12 @@ function completeTransaction(paymentMethod, metadata = {}) {
     tendered: metadata.tendered || net,
     change: metadata.change || 0,
     approvalCode: metadata.approvalCode || null,
+    customerPhone: customerPhone,
     synced: state.isOnline,
     isVoid: false
   };
+
+  persistTransactionToIdb(txRecord);
 
   if (state.isOnline) {
     state.transactions.unshift(txRecord);
@@ -1313,12 +1359,210 @@ function initApp() {
     showToast('Feed transaksi berhasil diperbarui.', 'info');
   };
 
-  // Initial Render
+// --- 14. PWA SERVICE WORKER & INDEXEDDB ENGINE ---
+function initPwaAndServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        console.log('[PWA] Service Worker aktif:', reg.scope);
+      }).catch((err) => {
+        console.warn('[PWA] Service Worker gagal registrasi:', err);
+      });
+    });
+  }
+}
+
+const DB_NAME = 'RaeccaPOS_DB';
+const DB_VERSION = 1;
+let idb = null;
+
+function initIndexedDb() {
+  if (!('indexedDB' in window)) return;
+  const req = indexedDB.open(DB_NAME, DB_VERSION);
+  req.onupgradeneeded = (e) => {
+    const db = e.target.result;
+    if (!db.objectStoreNames.contains('transactions')) {
+      db.createObjectStore('transactions', { keyPath: 'id' });
+    }
+  };
+  req.onsuccess = (e) => {
+    idb = e.target.result;
+    console.log('[IndexedDB] Database RaeccaPOS_DB terhubung.');
+  };
+  req.onerror = (e) => {
+    console.warn('[IndexedDB] Gagal membuka DB:', e);
+  };
+}
+
+function persistTransactionToIdb(tx) {
+  if (!idb) return;
+  try {
+    const dbTx = idb.transaction(['transactions'], 'readwrite');
+    const store = dbTx.objectStore('transactions');
+    store.put(tx);
+  } catch (err) {
+    console.warn('[IndexedDB] Gagal menyimpan transaksi:', err);
+  }
+}
+
+// --- 15. HARDWARE USB BARCODE SCANNER BUFFER LISTENER ---
+let barcodeBuffer = '';
+let lastKeyTime = 0;
+
+function initHardwareBarcodeScanner() {
+  window.addEventListener('keydown', (e) => {
+    const targetTag = e.target.tagName ? e.target.tagName.toLowerCase() : '';
+    const isTextInput = targetTag === 'input' || targetTag === 'textarea';
+
+    const now = Date.now();
+    const interval = now - lastKeyTime;
+    lastKeyTime = now;
+
+    if (e.key === 'Enter') {
+      if (barcodeBuffer.length >= 8 && interval < 80) {
+        const scannedCode = barcodeBuffer.trim();
+        const matchedProduct = state.products.find(p => p.sku === scannedCode || p.id.toLowerCase() === scannedCode.toLowerCase());
+        if (matchedProduct) {
+          addToCart(matchedProduct.id);
+          showToast(`⚡ Scanner USB: ${matchedProduct.name} otomatis masuk keranjang!`, 'success');
+          if (isTextInput) e.target.value = '';
+        }
+        barcodeBuffer = '';
+        e.preventDefault();
+        return;
+      }
+      barcodeBuffer = '';
+    } else if (e.key.length === 1) {
+      if (interval > 100) {
+        barcodeBuffer = e.key;
+      } else {
+        barcodeBuffer += e.key;
+      }
+    }
+  });
+}
+
+// --- 16. BLIND SHIFT CLOSING & CASH AUDIT MODULE ---
+function initBlindClosingModule() {
+  const openBtn = document.getElementById('btnOpenBlindClosing');
+  const modal = document.getElementById('modalBlindClosing');
+  const closeBtn = document.getElementById('btnCloseBlindModal');
+  const submitCountBtn = document.getElementById('btnSubmitBlindCount');
+  const recountBtn = document.getElementById('btnRecountBlind');
+  const printBaBtn = document.getElementById('btnPrintBeritaAcara');
+
+  if (!openBtn || !modal) return;
+
+  openBtn.onclick = () => {
+    document.querySelectorAll('.denom-qty').forEach(i => i.value = '');
+    updateDenomCalculations();
+    document.getElementById('blindStepInput').style.display = 'block';
+    document.getElementById('blindStepResult').style.display = 'none';
+    modal.style.display = 'flex';
+  };
+
+  closeBtn.onclick = () => {
+    modal.style.display = 'none';
+  };
+
+  document.querySelectorAll('.denom-qty, #blindPettyCash').forEach(inp => {
+    inp.oninput = updateDenomCalculations;
+  });
+
+  submitCountBtn.onclick = () => {
+    const totalPhysical = calculateTotalPhysicalDrawer();
+    const pettyCash = Number(document.getElementById('blindPettyCash').value) || 0;
+    const netPhysicalDeposit = Math.max(0, totalPhysical - pettyCash);
+
+    let systemCash = 0;
+    state.transactions.filter(t => !t.isVoid).forEach(t => {
+      if (t.method.includes('Cash')) {
+        systemCash += t.net;
+      }
+    });
+
+    const variance = netPhysicalDeposit - systemCash;
+
+    document.getElementById('compDrawerPhysical').textContent = formatRupiah(totalPhysical);
+    document.getElementById('compPettyCash').textContent = `- ${formatRupiah(pettyCash)}`;
+    document.getElementById('compNetPhysicalDeposit').textContent = formatRupiah(netPhysicalDeposit);
+    document.getElementById('compSystemCash').textContent = formatRupiah(systemCash);
+
+    const statusCard = document.getElementById('reconcileStatusCard');
+    const badge = document.getElementById('reconcileBadge');
+    const varianceText = document.getElementById('reconcileVarianceText');
+    const desc = document.getElementById('reconcileDesc');
+
+    if (variance === 0) {
+      statusCard.className = 'reconcile-result-card';
+      badge.textContent = 'BALANCED (100% SESUAI)';
+      varianceText.textContent = 'Selisih Kasir: Rp 0';
+      desc.textContent = 'Audit Sukses: Uang fisik tunai kasir 100% akurat dan cocok dengan rekapan transaksi sistem POS.';
+    } else if (variance < 0) {
+      statusCard.className = 'reconcile-result-card shortage';
+      badge.textContent = 'SHORTAGE (UANG FISIK KURANG)';
+      varianceText.textContent = `Selisih: - ${formatRupiah(Math.abs(variance))}`;
+      desc.textContent = 'PERINGATAN AUDIT: Uang fisik di laci kurang dari catatan transaksi tunai sistem. Wajib buat Berita Acara!';
+    } else {
+      statusCard.className = 'reconcile-result-card shortage';
+      badge.textContent = 'OVERAGE (UANG FISIK LEBIH)';
+      varianceText.textContent = `Selisih: + ${formatRupiah(variance)}`;
+      desc.textContent = 'Pemberitahuan: Uang fisik di laci lebih besar dari transaksi POS. Periksa kembali struk kembalian!';
+    }
+
+    document.getElementById('blindStepInput').style.display = 'none';
+    document.getElementById('blindStepResult').style.display = 'block';
+  };
+
+  recountBtn.onclick = () => {
+    document.getElementById('blindStepInput').style.display = 'block';
+    document.getElementById('blindStepResult').style.display = 'none';
+  };
+
+  printBaBtn.onclick = () => {
+    window.print();
+  };
+}
+
+function calculateTotalPhysicalDrawer() {
+  let total = 0;
+  document.querySelectorAll('.denom-qty').forEach(inp => {
+    const multiplier = Number(inp.dataset.multiplier) || 1;
+    const count = Number(inp.value) || 0;
+    total += count * multiplier;
+  });
+  return total;
+}
+
+function updateDenomCalculations() {
+  document.querySelectorAll('.denom-qty').forEach(inp => {
+    const multiplier = Number(inp.dataset.multiplier) || 1;
+    const count = Number(inp.value) || 0;
+    const subtotal = count * multiplier;
+    const subtotalId = inp.id.replace('denom_', 'subtotal_');
+    const subtotalEl = document.getElementById(subtotalId);
+    if (subtotalEl) {
+      subtotalEl.textContent = formatRupiah(subtotal);
+    }
+  });
+
+  const total = calculateTotalPhysicalDrawer();
+  const display = document.getElementById('blindDrawerTotal');
+  if (display) display.textContent = formatRupiah(total);
+}
+
+  // Initial Render & Engine Startup
   document.getElementById('cartInvoiceId').textContent = generateInvoiceNumber();
   renderProductGrid();
   renderCart();
   renderManagementDashboard();
   renderSupervisorPanel();
+
+  // Initialize Enterprise Optimizations
+  initPwaAndServiceWorker();
+  initIndexedDb();
+  initHardwareBarcodeScanner();
+  initBlindClosingModule();
 }
 
 // Expose updateQty helper for inline html calls
@@ -1328,3 +1572,4 @@ window.posEngine = {
 
 // Start application
 window.addEventListener('DOMContentLoaded', initApp);
+
