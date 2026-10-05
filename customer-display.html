@@ -1050,24 +1050,33 @@
         cdItemsList.appendChild(row);
       });
 
+      // Auto-scroll to latest item
+      cdItemsList.scrollTop = cdItemsList.scrollHeight;
+
+      // Defensive calculation to ensure bill matches displayed items 100%
+      const gross = totals?.gross ?? cartData.reduce((sum, i) => sum + (i.price * i.qty), 0);
+      const discount = totals?.discount ?? 0;
+      const net = totals?.net ?? Math.max(0, gross - discount);
+      const totalItems = totals?.totalItems ?? cartData.reduce((sum, i) => sum + i.qty, 0);
+
       // Update Bill Summary
-      cdItemCount.textContent = `${totals.totalItems} item`;
-      cdSubtotal.textContent = formatRupiah(totals.gross);
+      cdItemCount.textContent = `${totalItems} item`;
+      cdSubtotal.textContent = formatRupiah(gross);
       
-      if (totals.discount > 0) {
+      if (discount > 0) {
         cdSavingsRow.style.display = 'flex';
-        cdSavings.textContent = `- ${formatRupiah(totals.discount)}`;
+        cdSavings.textContent = `- ${formatRupiah(discount)}`;
       } else {
         cdSavingsRow.style.display = 'none';
       }
 
-      cdGrandTotal.textContent = formatRupiah(totals.net);
+      cdGrandTotal.textContent = formatRupiah(net);
 
       // Gift threshold logic
-      if (totals.net >= 150000) {
+      if (net >= 150000) {
         cdGiftText.innerHTML = '🎉 <strong>Selamat!</strong> Belanjaan Anda berhak mendapatkan <strong>Free Pouch Cantik Raecca</strong>.';
       } else {
-        const remaining = 150000 - totals.net;
+        const remaining = 150000 - net;
         cdGiftText.innerHTML = `Tambah belanja <strong>${formatRupiah(remaining)}</strong> lagi untuk mendapatkan <strong>Free Pouch Cantik Raecca</strong>!`;
       }
     }
@@ -1106,7 +1115,7 @@
       }, 5500);
     }
 
-    // --- 5. HIGH-SPEED MULTI-LAYER SYNC ENGINE (BroadcastChannel + 80ms Active Polling) ---
+    // --- 5. HIGH-SPEED MULTI-LAYER SYNC ENGINE (BroadcastChannel + 50ms Active Polling) ---
     function processDisplayPayload(msg) {
       if (!msg || !msg.type) return;
 
@@ -1142,31 +1151,34 @@
     window.addEventListener('storage', (e) => {
       if (e.key === 'raecca_pos_broadcast' && e.newValue) {
         try {
+          lastRawBroadcast = e.newValue;
           const msg = JSON.parse(e.newValue);
           processDisplayPayload(msg);
         } catch (err) {}
       }
     });
 
-    // Layer 3: Ultra-Fast Active Polling (Runs every 80ms - Guarantees zero-lag sync across tabs & monitors)
-    let lastProcessedTimestamp = 0;
+    // Layer 3: Ultra-Fast Active Polling (Runs every 50ms - Guaranteed direct string diff)
+    let lastRawBroadcast = '';
     function pollSyncState() {
       try {
-        const rawTs = localStorage.getItem('raecca_pos_broadcast_ts');
-        const currentTs = rawTs ? Number(rawTs) : 0;
-        if (currentTs && currentTs !== lastProcessedTimestamp) {
-          lastProcessedTimestamp = currentTs;
-          const raw = localStorage.getItem('raecca_pos_broadcast');
-          if (raw) {
-            const data = JSON.parse(raw);
-            processDisplayPayload(data);
-          }
+        const raw = localStorage.getItem('raecca_pos_broadcast');
+        if (raw && raw !== lastRawBroadcast) {
+          lastRawBroadcast = raw;
+          const data = JSON.parse(raw);
+          processDisplayPayload(data);
         }
-      } catch (err) {}
+      } catch (err) {
+        console.warn('Sync poll error:', err);
+      }
     }
 
-    // Run active poll every 80ms (12.5 times per second)
-    setInterval(pollSyncState, 80);
+    // Run active poll every 50ms (20 times per second)
+    setInterval(pollSyncState, 50);
+    window.addEventListener('focus', pollSyncState);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) pollSyncState();
+    });
 
     // Immediate initial sync on startup
     pollSyncState();

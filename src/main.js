@@ -477,7 +477,6 @@ function calculateCartTotals() {
 
 function renderCart() {
   const list = document.getElementById('cartItemsList');
-  const emptyState = document.getElementById('cartEmptyState');
   const payBtn = document.getElementById('btnPayCheckout');
   const badge = document.getElementById('cartItemCountBadge');
 
@@ -490,9 +489,15 @@ function renderCart() {
   document.getElementById('btnPayAmount').textContent = formatRupiah(net);
 
   if (state.cart.length === 0) {
-    list.innerHTML = '';
-    list.appendChild(emptyState);
+    list.innerHTML = `
+      <div class="cart-empty-state" id="cartEmptyState">
+        <div class="empty-icon">🛍️</div>
+        <p>Belum ada produk dipilih</p>
+        <small>Klik produk di sebelah kiri atau gunakan pemindai barcode USB untuk memulai transaksi.</small>
+      </div>
+    `;
     payBtn.disabled = true;
+    checkSmartUpsell();
     broadcastCustomerDisplay('CART_UPDATE');
     if (document.getElementById('modalCustomerDisplay')?.style.display === 'flex') {
       renderCustomerDisplay();
@@ -500,7 +505,6 @@ function renderCart() {
     return;
   }
 
-  emptyState.remove();
   list.innerHTML = '';
 
   state.cart.forEach(item => {
@@ -509,24 +513,31 @@ function renderCart() {
     const itemSubtotal = item.product.price * item.qty;
 
     row.innerHTML = `
-      <div class="cart-item-main">
-        <div>
-          <div class="cart-item-name">${item.product.name}</div>
-          <div class="cart-item-sku font-mono">SKU: ${item.product.sku} &bull; @${formatRupiah(item.product.price)}</div>
+      <div class="cart-item-info">
+        <div class="cart-item-name" title="${item.product.name}">${item.product.name}</div>
+        <div class="cart-item-meta font-mono">
+          <span>@${formatRupiah(item.product.price)}</span>
+          <span style="opacity: 0.4;">&bull;</span>
+          <span>${item.product.sku ? item.product.sku.slice(-5) : ''}</span>
         </div>
-        <div class="cart-item-total font-mono">${formatRupiah(itemSubtotal)}</div>
       </div>
-      <div class="cart-item-controls">
+      <div class="cart-item-right">
         <div class="qty-control-wrap">
           <button class="btn-qty" onclick="window.posEngine.updateQty('${item.product.id}', -1)">&minus;</button>
           <span class="qty-count font-mono">${item.qty}</span>
           <button class="btn-qty" onclick="window.posEngine.updateQty('${item.product.id}', 1)">&plus;</button>
         </div>
-        <button style="font-size: 11px; color: var(--danger);" onclick="window.posEngine.updateQty('${item.product.id}', -${item.qty})">Hapus</button>
+        <div class="cart-item-price-wrap">
+          <div class="cart-item-total font-mono">${formatRupiah(itemSubtotal)}</div>
+        </div>
+        <button class="btn-item-delete" title="Hapus Item" onclick="window.posEngine.updateQty('${item.product.id}', -${item.qty})">&times;</button>
       </div>
     `;
     list.appendChild(row);
   });
+
+  // Ensure new items are immediately visible by scrolling to bottom
+  list.scrollTop = list.scrollHeight;
 
   payBtn.disabled = false;
   checkSmartUpsell();
