@@ -68,6 +68,6 @@ npm run build
 
 ---
 
-## 📄 Dokumen Spesifikasi
-Dokumen cetak biru dan SOP lengkap tersedia pada:  
-[PROPOSAL_SOP_POS_DAN_PELAPORAN_RAECCA.md](PROPOSAL_SOP_POS_DAN_PELAPORAN_RAECCA.md)
+## 📄 Dokumen Spesifikasi & Update
+- 📘 **[Dokumentasi Update Sistem v2.0.0](DOKUMENTASI_UPDATE_SISTEM.md)**: Catatan rilis lengkap 5 pilar optimalisasi, panduan teknis, dan SOP operasional kasir.
+- 📋 **[Proposal & Cetak Biru POS Raecca](PROPOSAL_SOP_POS_DAN_PELAPORAN_RAECCA.md)**: Cetak biru arsitektur hardware, software RBAC, mitigasi risiko, dan tata kelola pelaporan harian.
