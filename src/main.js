@@ -1460,6 +1460,7 @@ const customerChannel = new BroadcastChannel('raecca_pos_channel');
 
 function broadcastCustomerDisplay(type, extra = {}) {
   const { gross, discount, net, totalItems } = calculateCartTotals();
+  const nowTs = Date.now() + Math.random();
   const payload = {
     type,
     cart: state.cart.map(item => ({
@@ -1473,6 +1474,7 @@ function broadcastCustomerDisplay(type, extra = {}) {
     })),
     totals: { gross, discount, net, totalItems },
     paymentMethod: state.activePayMethod,
+    _ts: nowTs,
     ...extra
   };
 
@@ -1484,6 +1486,7 @@ function broadcastCustomerDisplay(type, extra = {}) {
 
   try {
     localStorage.setItem('raecca_pos_broadcast', JSON.stringify(payload));
+    localStorage.setItem('raecca_pos_broadcast_ts', String(nowTs));
   } catch (e) {}
 }
 

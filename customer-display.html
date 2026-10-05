@@ -1106,11 +1106,8 @@
       }, 5500);
     }
 
-    // --- 5. BROADCAST CHANNEL & STORAGE SYNC ENGINE ---
-    const channel = new BroadcastChannel('raecca_pos_channel');
-
-    channel.onmessage = (event) => {
-      const msg = event.data;
+    // --- 5. HIGH-SPEED MULTI-LAYER SYNC ENGINE (BroadcastChannel + 80ms Active Polling) ---
+    function processDisplayPayload(msg) {
       if (!msg || !msg.type) return;
 
       switch (msg.type) {
@@ -1133,29 +1130,47 @@
           showView('idle');
           break;
       }
+    }
+
+    // Layer 1: Native BroadcastChannel (0ms latency)
+    const channel = new BroadcastChannel('raecca_pos_channel');
+    channel.onmessage = (event) => {
+      processDisplayPayload(event.data);
     };
 
-    // Request initial state from POS Kasir if already running
-    channel.postMessage({ type: 'REQUEST_STATE' });
-
-    // Immediate state hydrate from LocalStorage (instant without waiting handshake)
-    try {
-      const saved = localStorage.getItem('raecca_pos_broadcast');
-      if (saved) {
-        const msg = JSON.parse(saved);
-        if (msg) channel.onmessage({ data: msg });
-      }
-    } catch (err) {}
-
-    // LocalStorage Fallback listener
+    // Layer 2: Window Storage Event
     window.addEventListener('storage', (e) => {
-      if (e.key === 'raecca_pos_broadcast') {
+      if (e.key === 'raecca_pos_broadcast' && e.newValue) {
         try {
           const msg = JSON.parse(e.newValue);
-          if (msg) channel.onmessage({ data: msg });
+          processDisplayPayload(msg);
         } catch (err) {}
       }
     });
+
+    // Layer 3: Ultra-Fast Active Polling (Runs every 80ms - Guarantees zero-lag sync across tabs & monitors)
+    let lastProcessedTimestamp = 0;
+    function pollSyncState() {
+      try {
+        const rawTs = localStorage.getItem('raecca_pos_broadcast_ts');
+        const currentTs = rawTs ? Number(rawTs) : 0;
+        if (currentTs && currentTs !== lastProcessedTimestamp) {
+          lastProcessedTimestamp = currentTs;
+          const raw = localStorage.getItem('raecca_pos_broadcast');
+          if (raw) {
+            const data = JSON.parse(raw);
+            processDisplayPayload(data);
+          }
+        }
+      } catch (err) {}
+    }
+
+    // Run active poll every 80ms (12.5 times per second)
+    setInterval(pollSyncState, 80);
+
+    // Immediate initial sync on startup
+    pollSyncState();
+    channel.postMessage({ type: 'REQUEST_STATE' });
   </script>
 </body>
 </html>
