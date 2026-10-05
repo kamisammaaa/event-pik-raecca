@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Raecca Beauty Care - Layar Pembeli (Customer Display)</title>
+  <link rel="icon" type="image/png" href="/images.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0A0812;
+      --bg-card: rgba(22, 18, 38, 0.75);
+      --bg-card-solid: #161226;
+      --border-card: rgba(232, 93, 117, 0.22);
+      --primary: #E85D75;
+      --primary-hover: #FF758C;
+      --primary-glow: rgba(232, 93, 117, 0.45);
+      --accent-gold: #F5A623;
+      --gold-glow: rgba(245, 166, 35, 0.35);
+      --success: #10B981;
+      --text-main: #FFFFFF;
+      --text-muted: #A09DB1;
+      --text-dim: #6D6882;
+      --font-heading: 'Outfit', sans-serif;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 22px;
+      --radius-full: 9999px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 0%, #20132B 0%, #0A0812 70%);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .font-mono {
+      font-family: var(--font-mono) !important;
+    }
+
+    /* Ambient Glow Behind Screen */
+    .ambient-glow {
+      position: fixed;
+      top: -150px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 400px;
+      background: radial-gradient(ellipse, rgba(232, 93, 117, 0.22), transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* TOP BRANDING BAR */
+    .top-bar {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 36px;
+      background: rgba(10, 8, 18, 0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-card);
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-logo {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--primary);
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+
+    .brand-text h1 {
+      font-family: var(--font-heading);
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      background: linear-gradient(135deg, #FFF 20%, #FFB6C1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .badge-counter {
+      background: rgba(232, 93, 117, 0.18);
+      color: var(--primary-hover);
+      padding: 2px 10px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 700;
+      border: 1px solid rgba(232, 93, 117, 0.35);
+    }
+
+    .top-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .live-status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      color: #34D399;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10B981;
+      box-shadow: 0 0 8px #10B981;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(0.9); opacity: 0.8; }
+      50% { transform: scale(1.2); opacity: 1; }
+    }
+
+    .clock-display {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent-gold);
+      letter-spacing: 1px;
+    }
+
+    .btn-fullscreen {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: white;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-fullscreen:hover {
+      background: rgba(255, 255, 255, 0.16);
+      transform: translateY(-1px);
+    }
+
+    /* MAIN VIEW CONTAINER */
+    .main-content {
+      position: relative;
+      z-index: 10;
+      flex: 1;
+      padding: 28px 36px 20px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ==========================================================================
+       VIEW 1: IDLE / WELCOME MODE (KERANJANG KOSONG)
+       ========================================================================== */
+    .view-idle {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      text-align: center;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .welcome-hero {
+      max-width: 900px;
+      margin-bottom: 30px;
+    }
+
+    .welcome-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(232, 93, 117, 0.15);
+      border: 1px solid rgba(232, 93, 117, 0.4);
+      padding: 6px 18px;
+      border-radius: var(--radius-full);
+      color: #FFB6C1;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      letter-spacing: 0.5px;
+    }
+
+    .welcome-title {
+      font-family: var(--font-heading);
+      font-size: 48px;
+      font-weight: 900;
+      line-height: 1.15;
+      margin-bottom: 14px;
+      background: linear-gradient(135deg, #FFFFFF 30%, #FF9EAA 70%, #E85D75 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .welcome-desc {
+      font-size: 18px;
+      color: var(--text-muted);
+      max-width: 650px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    .promo-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      max-width: 1080px;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .promo-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      padding: 24px 20px;
+      text-align: left;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+
+    .promo-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--primary);
+    }
+
+    .promo-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, #E85D75, #F5A623);
+    }
+
+    .promo-icon {
+      font-size: 38px;
+      margin-bottom: 12px;
+    }
+
+    .promo-title {
+      font-family: var(--font-heading);
+      font-size: 18px;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 6px;
+    }
+
+    .promo-body {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.45;
+      margin-bottom: 16px;
+    }
+
+    .promo-price-tag {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--accent-gold);
+    }
+
+    /* ==========================================================================
+       VIEW 2: ACTIVE CART MODE (SAAT ADA ITEM DIBELANJA)
+       ========================================================================== */
+    .view-cart {
+      display: none;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 28px;
+      flex: 1;
+      height: calc(100vh - 170px);
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    /* Left: Live Scanned Items List */
+    .cart-pane-left {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .pane-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 14px;
+    }
+
+    .pane-title {
+      font-family: var(--font-heading);
+      font-size: 20px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .item-count-badge {
+      background: rgba(232, 93, 117, 0.2);
+      color: var(--primary-hover);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 12px;
+      border-radius: var(--radius-full);
+      border: 1px solid rgba(232, 93, 117, 0.4);
+    }
+
+    .customer-items-scroll {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-right: 6px;
+    }
+
+    .customer-items-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .customer-items-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+    }
+
+    .customer-item-row {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      animation: slideInRow 0.3s ease-out;
+    }
+
+    @keyframes slideInRow {
+      from { opacity: 0; transform: translateX(-16px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .item-left-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .item-icon-box {
+      width: 48px;
+      height: 48px;
+      background: rgba(232, 93, 117, 0.12);
+      border: 1px solid rgba(232, 93, 117, 0.3);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .item-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 4px;
+    }
+
+    .item-calc-detail {
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .qty-bubble {
+      background: var(--primary);
+      color: white;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 1px 7px;
+      border-radius: 4px;
+    }
+
+    .item-subtotal-price {
+      font-family: var(--font-mono);
+      font-size: 20px;
+      font-weight: 800;
+      color: white;
+      text-align: right;
+    }
+
+    /* Right: Bill Summary & QRIS Standing Card */
+    .cart-pane-right {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .total-bill-card {
+      background: linear-gradient(135deg, rgba(232, 93, 117, 0.16) 0%, rgba(30, 20, 45, 0.85) 100%);
+      border: 2px solid var(--primary);
+      border-radius: var(--radius-lg);
+      padding: 26px 28px;
+      box-shadow: 0 16px 40px rgba(232, 93, 117, 0.25);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bill-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 16px;
+    }
+
+    .bill-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 15px;
+      color: var(--text-muted);
+    }
+
+    .bill-row.promo-savings {
+      color: #34D399;
+      font-weight: 700;
+    }
+
+    .total-headline-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+    }
+
+    .total-amount-display {
+      font-family: var(--font-mono);
+      font-size: 46px;
+      font-weight: 900;
+      color: #FFFFFF;
+      letter-spacing: -0.5px;
+      margin: 4px 0 10px;
+      text-shadow: 0 4px 20px rgba(232, 93, 117, 0.5);
+    }
+
+    .gift-notice-box {
+      background: rgba(245, 166, 35, 0.12);
+      border: 1px solid rgba(245, 166, 35, 0.35);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: #FCD34D;
+      font-weight: 600;
+    }
+
+    /* PAYMENT QRIS SECTION ON CUSTOMER SCREEN */
+    .payment-focus-card {
+      flex: 1;
+      background: white;
+      color: #111827;
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+      position: relative;
+    }
+
+    .qris-header-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .qris-badge-title {
+      font-family: var(--font-heading);
+      font-size: 18px;
+      font-weight: 900;
+      color: #DC2626;
+      letter-spacing: 1px;
+    }
+
+    .qris-qr-container {
+      width: 170px;
+      height: 170px;
+      background: #FFFFFF;
+      padding: 8px;
+      border-radius: var(--radius-md);
+      border: 2px solid #E5E7EB;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .qris-qr-code {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .qris-qr-overlay-logo {
+      position: absolute;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    }
+
+    .qris-instruction {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1F2937;
+      margin-bottom: 4px;
+    }
+
+    .qris-banks-list {
+      font-size: 11px;
+      color: #6B7280;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .qris-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #FEE2E2;
+      color: #991B1B;
+      padding: 4px 14px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* Cash / EDC focus states */
+    .cash-focus-card, .edc-focus-card {
+      display: none;
+      flex: 1;
+      background: var(--bg-card-solid);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    /* ==========================================================================
+       VIEW 3: SUCCESS CELEBRATION (TRANSAKSI BERHASIL)
+       ========================================================================== */
+    .view-success {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      text-align: center;
+      animation: scaleUp 0.4s ease-out;
+    }
+
+    @keyframes scaleUp {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .success-icon-wrap {
+      width: 100px;
+      height: 100px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 3px solid #10B981;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      box-shadow: 0 0 40px rgba(16, 185, 129, 0.4);
+      margin-bottom: 24px;
+      animation: pulseGreen 1.5s infinite;
+    }
+
+    @keyframes pulseGreen {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+
+    .success-title {
+      font-family: var(--font-heading);
+      font-size: 42px;
+      font-weight: 900;
+      color: #FFFFFF;
+      margin-bottom: 8px;
+    }
+
+    .success-invoice {
+      font-family: var(--font-mono);
+      font-size: 18px;
+      color: var(--accent-gold);
+      margin-bottom: 24px;
+    }
+
+    .success-summary-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-md);
+      padding: 24px 36px;
+      min-width: 440px;
+      margin-bottom: 24px;
+    }
+
+    .success-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 16px;
+      color: var(--text-muted);
+    }
+
+    .success-row.grand {
+      font-size: 22px;
+      font-weight: 800;
+      color: white;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 12px;
+      margin-top: 12px;
+      margin-bottom: 0;
+    }
+
+    .success-thank-msg {
+      font-size: 16px;
+      color: var(--text-muted);
+    }
+
+    /* RUNNING MARQUEE FOOTER */
+    .running-marquee {
+      position: relative;
+      z-index: 10;
+      background: rgba(15, 12, 27, 0.9);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 10px 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .marquee-inner {
+      display: inline-block;
+      padding-left: 100%;
+      animation: marquee 25s linear infinite;
+      font-size: 13px;
+      font-weight: 600;
+      color: #FFB6C1;
+      letter-spacing: 0.5px;
+    }
+
+    @keyframes marquee {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(-100%, 0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-glow"></div>
+
+  <!-- TOP BRANDING BAR -->
+  <header class="top-bar">
+    <div class="brand-wrap">
+      <img src="/images.png" alt="Raecca Logo" class="brand-logo" width="58" height="58">
+      <div class="brand-text">
+        <h1>RAECCA BEAUTY CARE</h1>
+        <div class="brand-sub">
+          <span>Pop-up Store PIK</span>
+          <span class="badge-counter">Curved Counter L</span>
+          <span>&bull; Jakarta Utara</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="top-right">
+      <div class="live-status-pill">
+        <span class="status-dot"></span>
+        <span>Layar Pembeli Aktif</span>
+      </div>
+      <div class="clock-display font-mono" id="liveClock">22:00:00 WIB</div>
+      <button class="btn-fullscreen" id="btnFullscreenToggle" title="Perbesar Layar Penuh">
+        ⛶ Layar Penuh (F11)
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN DYNAMIC CONTENT -->
+  <main class="main-content">
+    
+    <!-- VIEW 1: WELCOME / IDLE (KERANJANG KOSONG) -->
+    <section class="view-idle" id="viewIdle">
+      <div class="welcome-hero">
+        <div class="welcome-tag">✨ POP-UP BOOTH SPECIAL EVENT</div>
+        <h2 class="welcome-title">Selamat Datang di Raecca Beauty Care</h2>
+        <p class="welcome-desc">
+          Nikmati pengalaman belanja produk kecantikan & lip care viral dengan promo bundling eksklusif hanya di Pop-up Store PIK.
+        </p>
+      </div>
+
+      <div class="promo-cards-grid">
+        <!-- Promo 1 -->
+        <div class="promo-card">
+          <div>
+            <div class="promo-icon">💄</div>
+            <h3 class="promo-title">Raecca Lippie Serum</h3>
+            <p class="promo-body">Formula viral berubah warna mengikuti suhu & pH bibir dengan kandungan Jojoba Oil & Vit E.</p>
+          </div>
+          <div class="promo-price-tag">Best Seller: Rp 59.000</div>
+        </div>
+
+        <!-- Promo 2 -->
+        <div class="promo-card">
+          <div>
+            <div class="promo-icon">🎁</div>
+            <h3 class="promo-title">🔥 BUNDLE: Duo Lippie Hero</h3>
+            <p class="promo-body">Paket Lippie Serum + Lippie Glow Pop tinted balm. Tampil glowing maksimal hemat Rp 15.000!</p>
+          </div>
+          <div class="promo-price-tag">Promo Event: Rp 109.000</div>
+        </div>
+
+        <!-- Promo 3 -->
+        <div class="promo-card">
+          <div>
+            <div class="promo-icon">🌸</div>
+            <h3 class="promo-title">Gratis Pouch Spesial</h3>
+            <p class="promo-body">Dapatkan pouch cantik eksklusif Raecca edisi terbatas untuk setiap pembelanjaan minimal Rp 150.000.</p>
+          </div>
+          <div class="promo-price-tag">Min. Belanja Rp 150.000</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: ACTIVE SHOPPING CART (SAAT KASIR SCAN / TAMBAH BARANG) -->
+    <section class="view-cart" id="viewCart">
+      <!-- Left: List Items -->
+      <div class="cart-pane-left">
+        <div class="pane-header">
+          <div class="pane-title">
+            <span>🛍️ Daftar Belanja Anda</span>
+            <span class="item-count-badge font-mono" id="cdItemCount">0 item</span>
+          </div>
+          <span style="font-size: 13px; color: var(--text-muted);">Diperbarui otomatis secara langsung</span>
+        </div>
+
+        <div class="customer-items-scroll" id="cdItemsList">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Right: Summary & QRIS Standing Card -->
+      <div class="cart-pane-right">
+        <!-- Bill Card -->
+        <div class="total-bill-card">
+          <div class="bill-rows">
+            <div class="bill-row">
+              <span>Subtotal Produk:</span>
+              <span class="font-mono" id="cdSubtotal">Rp 0</span>
+            </div>
+            <div class="bill-row promo-savings" id="cdSavingsRow" style="display: none;">
+              <span>🎉 Diskon Promo Booth PIK:</span>
+              <span class="font-mono" id="cdSavings">- Rp 0</span>
+            </div>
+          </div>
+
+          <div class="total-headline-label">Total Yang Harus Dibayar:</div>
+          <div class="total-amount-display" id="cdGrandTotal">Rp 0</div>
+
+          <div class="gift-notice-box" id="cdGiftNotice">
+            <span>🎁</span>
+            <span id="cdGiftText">Promo: Dapatkan Souvenir Pouch Cantik Raecca setiap belanja min. Rp 150.000!</span>
+          </div>
+        </div>
+
+        <!-- Payment Mode Card (QRIS Default) -->
+        <div class="payment-focus-card" id="qrisFocusCard">
+          <div class="qris-header-logo">
+            <span style="font-size: 20px;">📱</span>
+            <span class="qris-badge-title">PEMBAYARAN QRIS INSTAN</span>
+          </div>
+
+          <div class="qris-qr-container">
+            <!-- Simulated QR Code SVG Pattern -->
+            <svg class="qris-qr-code" viewBox="0 0 100 100" fill="black">
+              <!-- Corner Targets -->
+              <rect x="5" y="5" width="25" height="25" fill="#111"/>
+              <rect x="8" y="8" width="19" height="19" fill="#FFF"/>
+              <rect x="11" y="11" width="13" height="13" fill="#111"/>
+              <rect x="70" y="5" width="25" height="25" fill="#111"/>
+              <rect x="73" y="8" width="19" height="19" fill="#FFF"/>
+              <rect x="76" y="11" width="13" height="13" fill="#111"/>
+              <rect x="5" y="70" width="25" height="25" fill="#111"/>
+              <rect x="8" y="73" width="19" height="19" fill="#FFF"/>
+              <rect x="11" y="76" width="13" height="13" fill="#111"/>
+              <!-- Data Elements -->
+              <rect x="35" y="10" width="8" height="8"/>
+              <rect x="48" y="8" width="14" height="8"/>
+              <rect x="36" y="24" width="26" height="8"/>
+              <rect x="10" y="36" width="18" height="6"/>
+              <rect x="35" y="38" width="12" height="12"/>
+              <rect x="54" y="38" width="12" height="8"/>
+              <rect x="72" y="36" width="20" height="8"/>
+              <rect x="10" y="48" width="12" height="14"/>
+              <rect x="28" y="54" width="8" height="8"/>
+              <rect x="70" y="50" width="22" height="8"/>
+              <rect x="36" y="56" width="28" height="6"/>
+              <rect x="72" y="64" width="10" height="14"/>
+              <rect x="86" y="64" width="8" height="14"/>
+              <rect x="36" y="68" width="8" height="24"/>
+              <rect x="50" y="72" width="14" height="10"/>
+              <rect x="50" y="86" width="30" height="8"/>
+            </svg>
+            <img src="/images.png" alt="Raecca QR Center" class="qris-qr-overlay-logo" width="36" height="36">
+          </div>
+
+          <div class="qris-instruction">Buka Aplikasi Bank / E-Wallet & Scan QR di Atas</div>
+          <div class="qris-banks-list">BCA &bull; Mandiri Livin &bull; BRImo &bull; BNI &bull; GoPay &bull; OVO &bull; ShopeePay &bull; DANA</div>
+          <div class="qris-status-badge">
+            <span>⏳</span>
+            <span>Menunggu pembayaran pelanggan...</span>
+          </div>
+        </div>
+
+        <!-- Cash Mode Display (Alternative) -->
+        <div class="cash-focus-card" id="cashFocusCard">
+          <div style="font-size: 40px; margin-bottom: 8px;">💵</div>
+          <h3 style="font-size: 20px; font-weight: 800; color: white; margin-bottom: 6px;">Pembayaran Tunai (Cash)</h3>
+          <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px;">Silakan serahkan uang tunai kepada kasir.</p>
+          <div style="background: rgba(255,255,255,0.06); padding: 14px 20px; border-radius: var(--radius-md); width: 100%;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: var(--text-muted);">
+              <span>Uang Diterima:</span>
+              <span class="font-mono" id="cashDisplayTendered" style="color: white; font-weight: 700;">Rp 0</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 800; color: #34D399;">
+              <span>Kembalian Anda:</span>
+              <span class="font-mono" id="cashDisplayChange">Rp 0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: SUCCESS CELEBRATION (TRANSAKSI BERHASIL) -->
+    <section class="view-success" id="viewSuccess">
+      <div class="success-icon-wrap">✓</div>
+      <h2 class="success-title">Pembayaran Berhasil!</h2>
+      <div class="success-invoice font-mono" id="successInvoiceText">Invoice #RC-261005-0012</div>
+
+      <div class="success-summary-box">
+        <div class="success-row">
+          <span>Metode Pembayaran:</span>
+          <span style="font-weight: 700; color: white;" id="successMethodText">QRIS BCA</span>
+        </div>
+        <div class="success-row">
+          <span>Total Item Dibeli:</span>
+          <span style="font-weight: 700; color: white;" id="successItemCountText">2 Item</span>
+        </div>
+        <div class="success-row grand">
+          <span>Total Dibayar:</span>
+          <span class="font-mono text-gradient-primary" style="color: #FF758C;" id="successTotalText">Rp 109.000</span>
+        </div>
+        <div class="success-row" id="successChangeRow" style="display: none; margin-top: 8px;">
+          <span style="color: #34D399; font-weight: 700;">Kembalian Tunai:</span>
+          <span class="font-mono" style="color: #34D399; font-weight: 800;" id="successChangeText">Rp 0</span>
+        </div>
+      </div>
+
+      <p class="success-thank-msg">
+        Terima kasih telah berbelanja di <strong>Raecca Beauty Care Pop-up Store PIK</strong>.<br>
+        Silakan ambil struk belanja fisik Anda di meja kasir. Semoga hari Anda menyenangkan! ✨
+      </p>
+    </section>
+
+  </main>
+
+  <!-- BOTTOM RUNNING PROMO TICKER -->
+  <footer class="running-marquee">
+    <div class="marquee-inner">
+      💄 SPECIAL PROMO PIK POP-UP STORE: BUNDLE DUO LIPPIE HERO HEMAT RP 15.000 &bull; 🌸 GRATIS EXCLUSIVE POUCH UNTUK MINIMAL PEMBELIAN RP 150.000 &bull; ✨ MENERIMA PEMBAYARAN QRIS (BCA, MANDIRI, BRI, GOPAY, OVO, SHOPEEPAY) & KARTU DEBIT/KREDIT EDC &bull; 🧴 DUKUNGAN KONSULTASI BEAUTY ADVISOR SETIAP HARI &bull; RAECCA BEAUTY CARE - GLOW UP YOUR CONFIDENCE
+    </div>
+  </footer>
+
+  <script>
+    // --- 1. CLOCK ENGINE ---
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('id-ID', { hour12: false }) + ' WIB';
+      const el = document.getElementById('liveClock');
+      if (el) el.textContent = timeStr;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // --- 2. FORMATTER ---
+    function formatRupiah(amount) {
+      return 'Rp ' + Number(amount || 0).toLocaleString('id-ID');
+    }
+
+    // --- 3. FULLSCREEN TOGGLE ---
+    const btnFullscreen = document.getElementById('btnFullscreenToggle');
+    btnFullscreen.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.warn('Fullscreen request failed:', err);
+        });
+      } else {
+        document.exitFullscreen().catch(err => console.warn(err));
+      }
+    });
+
+    // --- 4. VIEWS CONTROLLER ---
+    const viewIdle = document.getElementById('viewIdle');
+    const viewCart = document.getElementById('viewCart');
+    const viewSuccess = document.getElementById('viewSuccess');
+
+    const cdItemsList = document.getElementById('cdItemsList');
+    const cdItemCount = document.getElementById('cdItemCount');
+    const cdSubtotal = document.getElementById('cdSubtotal');
+    const cdSavings = document.getElementById('cdSavings');
+    const cdSavingsRow = document.getElementById('cdSavingsRow');
+    const cdGrandTotal = document.getElementById('cdGrandTotal');
+    const cdGiftText = document.getElementById('cdGiftText');
+
+    const qrisFocusCard = document.getElementById('qrisFocusCard');
+    const cashFocusCard = document.getElementById('cashFocusCard');
+    const cashDisplayTendered = document.getElementById('cashDisplayTendered');
+    const cashDisplayChange = document.getElementById('cashDisplayChange');
+
+    let successTimer = null;
+
+    function showView(viewName) {
+      if (viewName !== 'success' && successTimer) {
+        clearTimeout(successTimer);
+        successTimer = null;
+      }
+
+      viewIdle.style.display = viewName === 'idle' ? 'flex' : 'none';
+      viewCart.style.display = viewName === 'cart' ? 'grid' : 'none';
+      viewSuccess.style.display = viewName === 'success' ? 'flex' : 'none';
+    }
+
+    function renderCustomerCart(cartData, totals) {
+      if (!cartData || cartData.length === 0) {
+        showView('idle');
+        return;
+      }
+
+      showView('cart');
+      cdItemsList.innerHTML = '';
+
+      cartData.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'customer-item-row';
+        row.innerHTML = `
+          <div class="item-left-info">
+            <div class="item-icon-box">${item.icon || '💄'}</div>
+            <div>
+              <div class="item-title">${item.name}</div>
+              <div class="item-calc-detail">
+                <span class="qty-bubble">${item.qty}x</span>
+                <span>@ ${formatRupiah(item.price)}</span>
+                ${item.normalPrice && item.normalPrice > item.price ? `<span style="text-decoration: line-through; color: var(--text-dim);">${formatRupiah(item.normalPrice)}</span>` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="item-subtotal-price">${formatRupiah(item.subtotal || item.price * item.qty)}</div>
+        `;
+        cdItemsList.appendChild(row);
+      });
+
+      // Update Bill Summary
+      cdItemCount.textContent = `${totals.totalItems} item`;
+      cdSubtotal.textContent = formatRupiah(totals.gross);
+      
+      if (totals.discount > 0) {
+        cdSavingsRow.style.display = 'flex';
+        cdSavings.textContent = `- ${formatRupiah(totals.discount)}`;
+      } else {
+        cdSavingsRow.style.display = 'none';
+      }
+
+      cdGrandTotal.textContent = formatRupiah(totals.net);
+
+      // Gift threshold logic
+      if (totals.net >= 150000) {
+        cdGiftText.innerHTML = '🎉 <strong>Selamat!</strong> Belanjaan Anda berhak mendapatkan <strong>Free Pouch Cantik Raecca</strong>.';
+      } else {
+        const remaining = 150000 - totals.net;
+        cdGiftText.innerHTML = `Tambah belanja <strong>${formatRupiah(remaining)}</strong> lagi untuk mendapatkan <strong>Free Pouch Cantik Raecca</strong>!`;
+      }
+    }
+
+    function handlePaymentState(method, paymentData = {}) {
+      if (method === 'cash') {
+        qrisFocusCard.style.display = 'none';
+        cashFocusCard.style.display = 'flex';
+        cashDisplayTendered.textContent = formatRupiah(paymentData.tendered || 0);
+        cashDisplayChange.textContent = formatRupiah(paymentData.change || 0);
+      } else {
+        // QRIS or EDC default
+        qrisFocusCard.style.display = 'flex';
+        cashFocusCard.style.display = 'none';
+      }
+    }
+
+    function handlePaymentSuccess(data) {
+      showView('success');
+      document.getElementById('successInvoiceText').textContent = `Invoice: ${data.invoiceId || 'RC-PIK-SUCCESS'}`;
+      document.getElementById('successMethodText').textContent = data.method || 'QRIS BCA';
+      document.getElementById('successItemCountText').textContent = `${data.totalItems || 1} Item`;
+      document.getElementById('successTotalText').textContent = formatRupiah(data.net || 0);
+
+      const changeRow = document.getElementById('successChangeRow');
+      if (data.change && data.change > 0) {
+        changeRow.style.display = 'flex';
+        document.getElementById('successChangeText').textContent = formatRupiah(data.change);
+      } else {
+        changeRow.style.display = 'none';
+      }
+
+      // Auto revert to idle after 5.5s
+      successTimer = setTimeout(() => {
+        showView('idle');
+      }, 5500);
+    }
+
+    // --- 5. BROADCAST CHANNEL & STORAGE SYNC ENGINE ---
+    const channel = new BroadcastChannel('raecca_pos_channel');
+
+    channel.onmessage = (event) => {
+      const msg = event.data;
+      if (!msg || !msg.type) return;
+
+      switch (msg.type) {
+        case 'CART_UPDATE':
+          renderCustomerCart(msg.cart, msg.totals);
+          if (msg.paymentMethod) {
+            handlePaymentState(msg.paymentMethod, msg);
+          }
+          break;
+
+        case 'PAYMENT_PENDING':
+          handlePaymentState(msg.method, msg);
+          break;
+
+        case 'PAYMENT_SUCCESS':
+          handlePaymentSuccess(msg);
+          break;
+
+        case 'CLEAR_CART':
+          showView('idle');
+          break;
+      }
+    };
+
+    // Request initial state from POS Kasir if already running
+    channel.postMessage({ type: 'REQUEST_STATE' });
+
+    // Immediate state hydrate from LocalStorage (instant without waiting handshake)
+    try {
+      const saved = localStorage.getItem('raecca_pos_broadcast');
+      if (saved) {
+        const msg = JSON.parse(saved);
+        if (msg) channel.onmessage({ data: msg });
+      }
+    } catch (err) {}
+
+    // LocalStorage Fallback listener
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'raecca_pos_broadcast') {
+        try {
+          const msg = JSON.parse(e.newValue);
+          if (msg) channel.onmessage({ data: msg });
+        } catch (err) {}
+      }
+    });
+  </script>
+</body>
+</html>

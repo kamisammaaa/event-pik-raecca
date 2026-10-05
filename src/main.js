@@ -493,6 +493,10 @@ function renderCart() {
     list.innerHTML = '';
     list.appendChild(emptyState);
     payBtn.disabled = true;
+    broadcastCustomerDisplay('CART_UPDATE');
+    if (document.getElementById('modalCustomerDisplay')?.style.display === 'flex') {
+      renderCustomerDisplay();
+    }
     return;
   }
 
@@ -526,6 +530,10 @@ function renderCart() {
 
   payBtn.disabled = false;
   checkSmartUpsell();
+  broadcastCustomerDisplay('CART_UPDATE');
+  if (document.getElementById('modalCustomerDisplay')?.style.display === 'flex') {
+    renderCustomerDisplay();
+  }
 }
 
 function checkSmartUpsell() {
@@ -582,10 +590,12 @@ function openPaymentModal() {
   switchPayMethod('qris');
 
   document.getElementById('modalPayment').style.display = 'flex';
+  broadcastCustomerDisplay('PAYMENT_PENDING', { method: state.activePayMethod });
 }
 
 function closePaymentModal() {
   document.getElementById('modalPayment').style.display = 'none';
+  broadcastCustomerDisplay('CART_UPDATE');
 }
 
 function switchPayMethod(method) {
@@ -600,6 +610,8 @@ function switchPayMethod(method) {
   if (method === 'qris') document.getElementById('payPaneQris').classList.add('active');
   if (method === 'edc') document.getElementById('payPaneEdc').classList.add('active');
   if (method === 'cash') document.getElementById('payPaneCash').classList.add('active');
+
+  broadcastCustomerDisplay('PAYMENT_PENDING', { method });
 }
 
 function updateCashChange(tendered, total) {
@@ -681,6 +693,16 @@ function completeTransaction(paymentMethod, metadata = {}) {
 
   closePaymentModal();
   showReceiptModal(txRecord);
+
+  // Broadcast Success to Monitor 2 (Customer Screen)
+  broadcastCustomerDisplay('PAYMENT_SUCCESS', {
+    invoiceId,
+    net,
+    method: paymentMethod,
+    tendered: metadata.tendered || net,
+    change: metadata.change || 0,
+    totalItems: cartSnapshot.reduce((s, i) => s + i.qty, 0)
+  });
 
   // Update Live Analytics
   renderManagementDashboard();
@@ -1480,7 +1502,7 @@ function initHardwareBarcodeScanner() {
         return;
       }
       barcodeBuffer = '';
-    } else if (e.key.length === 1) {
+    } else if (e.key && e.key.length === 1) {
       if (interval > 100) {
         barcodeBuffer = e.key;
       } else {
@@ -1599,7 +1621,60 @@ function updateDenomCalculations() {
   if (display) display.textContent = formatRupiah(total);
 }
 
-// --- 17. CUSTOMER-FACING DISPLAY (LAYAR GANDA PEMBELI) ---
+// --- 17. CUSTOMER-FACING DISPLAY (LAYAR GANDA PEMBELI DUAL-SCREEN) ---
+const customerChannel = new BroadcastChannel('raecca_pos_channel');
+
+function broadcastCustomerDisplay(type, extra = {}) {
+  const { gross, discount, net, totalItems } = calculateCartTotals();
+  const payload = {
+    type,
+    cart: state.cart.map(item => ({
+      id: item.product.id,
+      name: item.product.name,
+      price: item.product.price,
+      normalPrice: item.product.normalPrice || item.product.price,
+      qty: item.qty,
+      icon: item.product.icon,
+      subtotal: item.product.price * item.qty
+    })),
+    totals: { gross, discount, net, totalItems },
+    paymentMethod: state.activePayMethod,
+    ...extra
+  };
+
+  try {
+    customerChannel.postMessage(payload);
+  } catch (e) {
+    console.warn('BroadcastChannel error:', e);
+  }
+
+  try {
+    localStorage.setItem('raecca_pos_broadcast', JSON.stringify(payload));
+  } catch (e) {}
+}
+
+customerChannel.onmessage = (event) => {
+  if (event.data?.type === 'REQUEST_STATE') {
+    broadcastCustomerDisplay('CART_UPDATE');
+  }
+};
+
+function openCustomerPopoutWindow() {
+  const win = window.open(
+    '/customer-display.html',
+    'RaeccaCustomerDisplay',
+    'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes'
+  );
+  if (win) {
+    win.focus();
+    broadcastCustomerDisplay('CART_UPDATE');
+    showToast('🖥️ Layar Pembeli dibuka di Window Baru! Geser jendela ke Monitor 2 lalu tekan F11', 'success');
+  } else {
+    openCustomerDisplay();
+    showToast('⚠️ Pop-up window diblokir browser. Menggunakan pratinjau modal di layar ini.', 'info');
+  }
+}
+
 function openCustomerDisplay() {
   const modal = document.getElementById('modalCustomerDisplay');
   if (modal) {
@@ -1689,6 +1764,152 @@ function simulateQrisWebhook() {
   }, 700);
 }
 
+// --- 21. INITIAL ENGINE SETUP & EVENT HOOKS ---
+function initApp() {
+  // Live Clock
+  setInterval(updateLiveClock, 1000);
+  updateLiveClock();
+
+  // Navigation Role Switching
+  document.querySelectorAll('.role-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchRole(btn.dataset.role));
+  });
+
+  // Offline Simulator Toggle
+  const toggleNetBtn = document.getElementById('toggleNetworkBtn');
+  if (toggleNetBtn) toggleNetBtn.addEventListener('click', toggleNetworkOnline);
+
+  const btnSyncNow = document.getElementById('btnSyncNow');
+  if (btnSyncNow) btnSyncNow.addEventListener('click', syncOfflineQueue);
+
+  // POS Category Filter
+  document.querySelectorAll('.cat-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      state.selectedCategory = pill.dataset.category;
+      renderProductGrid();
+    });
+  });
+
+  // POS Product Search
+  const searchInput = document.getElementById('searchProductInput');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      state.searchQuery = e.target.value.trim();
+      renderProductGrid();
+    });
+  }
+
+  // POS Clear Cart
+  const btnClearCart = document.getElementById('btnClearCart');
+  if (btnClearCart) {
+    btnClearCart.addEventListener('click', () => {
+      if (state.cart.length === 0) return;
+      if (confirm('Yakin ingin mengosongkan keranjang belanja?')) {
+        state.cart = [];
+        renderCart();
+        showToast('Keranjang belanja dikosongkan', 'info');
+      }
+    });
+  }
+
+  // Checkout Pay Modal
+  const btnPayCheckout = document.getElementById('btnPayCheckout');
+  if (btnPayCheckout) btnPayCheckout.addEventListener('click', openPaymentModal);
+
+  const btnClosePayModal = document.getElementById('btnClosePayModal');
+  if (btnClosePayModal) btnClosePayModal.addEventListener('click', closePaymentModal);
+
+  // Pay Methods
+  document.querySelectorAll('.pay-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchPayMethod(btn.dataset.method));
+  });
+
+  // Cash Tendered calculation
+  const cashInput = document.getElementById('cashTenderedInput');
+  if (cashInput) {
+    cashInput.addEventListener('input', (e) => {
+      const { net } = calculateCartTotals();
+      updateCashChange(e.target.value, net);
+    });
+  }
+
+  document.querySelectorAll('.chip-btn').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const val = chip.dataset.amount;
+      const { net } = calculateCartTotals();
+      const currentVal = Number(cashInput.value) || 0;
+      const finalVal = val === 'exact' ? net : Number(val);
+      cashInput.value = finalVal;
+      updateCashChange(finalVal, net);
+    });
+  });
+
+  // Confirm Payments
+  const btnConfirmQris = document.getElementById('btnConfirmQris');
+  if (btnConfirmQris) {
+    btnConfirmQris.addEventListener('click', () => {
+      completeTransaction('QRIS BCA');
+    });
+  }
+
+  const btnConfirmEdc = document.getElementById('btnConfirmEdc');
+  if (btnConfirmEdc) {
+    btnConfirmEdc.addEventListener('click', () => {
+      const appCode = document.getElementById('edcApprovalCode').value.trim() || 'AUTH-' + Math.floor(100000 + Math.random() * 900000);
+      const bank = document.getElementById('edcBankSelect').value;
+      completeTransaction(`EDC ${bank}`, { approvalCode: appCode });
+    });
+  }
+
+  const btnConfirmCash = document.getElementById('btnConfirmCash');
+  if (btnConfirmCash) {
+    btnConfirmCash.addEventListener('click', () => {
+      const { net } = calculateCartTotals();
+      const tendered = Number(cashInput.value);
+      if (tendered < net) {
+        showToast('Jumlah uang tunai kurang!', 'error');
+        return;
+      }
+      completeTransaction('Cash', { tendered, change: tendered - net });
+    });
+  }
+
+  // Receipt Modal Controls
+  const btnCloseReceipt = document.getElementById('btnCloseReceipt');
+  if (btnCloseReceipt) btnCloseReceipt.addEventListener('click', closeReceiptModal);
+
+  const btnPrintReceipt = document.getElementById('btnPrintReceipt');
+  if (btnPrintReceipt) btnPrintReceipt.addEventListener('click', () => window.print());
+
+  // Supervisor PIN Actions
+  const btnClosePinModal = document.getElementById('btnClosePinModal');
+  if (btnClosePinModal) btnClosePinModal.addEventListener('click', closeSupervisorPinModal);
+
+  const btnVerifySpvPin = document.getElementById('btnVerifySpvPin');
+  if (btnVerifySpvPin) btnVerifySpvPin.addEventListener('click', verifySupervisorPin);
+
+  const spvPinInput = document.getElementById('spvPinInput');
+  if (spvPinInput) {
+    spvPinInput.addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') verifySupervisorPin();
+    });
+  }
+
+  // Closing EOD Modal Actions
+  const quickEodBtn = document.getElementById('quickEodBtn');
+  if (quickEodBtn) quickEodBtn.addEventListener('click', openEodClosingModal);
+
+  const btnCloseEodModal = document.getElementById('btnCloseEodModal');
+  if (btnCloseEodModal) btnCloseEodModal.addEventListener('click', closeEodClosingModal);
+
+  const btnPrintEodSheet = document.getElementById('btnPrintEodSheet');
+  if (btnPrintEodSheet) btnPrintEodSheet.addEventListener('click', printEodReportSheet);
+
+  const btnSendEodWa = document.getElementById('btnSendEodWa');
+  if (btnSendEodWa) btnSendEodWa.addEventListener('click', sendEodReportToWhatsApp);
+
   // Initial Render & Engine Startup
   document.getElementById('cartInvoiceId').textContent = generateInvoiceNumber();
   renderProductGrid();
@@ -1702,9 +1923,17 @@ function simulateQrisWebhook() {
   initHardwareBarcodeScanner();
   initBlindClosingModule();
 
-  // Hook new listeners
+  // Hook Customer Display buttons
   const btnCustomerDisplay = document.getElementById('btnCustomerDisplay');
-  if (btnCustomerDisplay) btnCustomerDisplay.onclick = openCustomerDisplay;
+  if (btnCustomerDisplay) btnCustomerDisplay.onclick = openCustomerPopoutWindow;
+
+  const btnPopoutCustomerWindow = document.getElementById('btnPopoutCustomerWindow');
+  if (btnPopoutCustomerWindow) {
+    btnPopoutCustomerWindow.onclick = () => {
+      openCustomerPopoutWindow();
+      closeCustomerDisplay();
+    };
+  }
 
   const btnCloseCustomerDisplay = document.getElementById('btnCloseCustomerDisplay');
   if (btnCloseCustomerDisplay) btnCloseCustomerDisplay.onclick = closeCustomerDisplay;
