@@ -1598,8 +1598,50 @@ function simulateQrisWebhook() {
   }, 700);
 }
 
-// --- 21. INITIAL ENGINE SETUP & EVENT HOOKS ---
+// --- 21. HELPER ALIASES & LIVE CLOCK ---
+function updateLiveClock() {
+  const now = new Date();
+  const clock = document.getElementById('liveClock');
+  if (clock) {
+    clock.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} WIB`;
+  }
+}
+
+const switchRole = setRole;
+const toggleNetworkOnline = toggleNetworkStatus;
+const syncOfflineQueue = syncOfflineTransactions;
+const verifySupervisorPin = submitSupervisorVoid;
+const openEodClosingModal = openEodReportModal;
+
+function closeEodClosingModal() {
+  const m = document.getElementById('modalEodReport');
+  if (m) m.style.display = 'none';
+}
+
+function printEodReportSheet() {
+  window.print();
+}
+
+function sendEodReportToWhatsApp() {
+  const text = document.getElementById('waBroadcastText')?.value || '';
+  const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+  window.open(waUrl, '_blank');
+}
+
+// --- 22. INITIAL ENGINE SETUP & EVENT HOOKS ---
 function initApp() {
+  // CRITICAL: Render Product Catalog & Cart Immediately
+  try {
+    const invEl = document.getElementById('cartInvoiceId');
+    if (invEl) invEl.textContent = generateInvoiceNumber();
+    renderProductGrid();
+    renderCart();
+    renderManagementDashboard();
+    renderSupervisorPanel();
+  } catch (err) {
+    console.error('Initial render error:', err);
+  }
+
   // Live Clock
   setInterval(updateLiveClock, 1000);
   updateLiveClock();
@@ -1744,12 +1786,6 @@ function initApp() {
   const btnSendEodWa = document.getElementById('btnSendEodWa');
   if (btnSendEodWa) btnSendEodWa.addEventListener('click', sendEodReportToWhatsApp);
 
-  // Initial Render & Engine Startup
-  document.getElementById('cartInvoiceId').textContent = generateInvoiceNumber();
-  renderProductGrid();
-  renderCart();
-  renderManagementDashboard();
-  renderSupervisorPanel();
 
   // Initialize Enterprise Optimizations
   initPwaAndServiceWorker();
