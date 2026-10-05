@@ -2077,18 +2077,324 @@ input:focus, select:focus, textarea:focus {
   border-radius: var(--radius-md);
 }
 
-.comp-row {
+/* ==========================================================================
+   CUSTOMER-FACING DISPLAY, DIRECT PRINT & PREDICTIVE STYLES
+   ========================================================================== */
+.btn-customer-display {
+  background: rgba(155, 93, 229, 0.15);
+  color: #C084FC;
+  border: 1px solid rgba(155, 93, 229, 0.35);
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 700;
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-customer-display:hover {
+  background: #9333EA;
+  color: white;
+  box-shadow: 0 4px 14px rgba(147, 51, 234, 0.4);
+}
+
+.btn-direct-print {
+  background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+  color: white;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
   font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+}
+
+.btn-direct-print:hover {
+  background: #047857;
+  transform: translateY(-2px);
+}
+
+.btn-direct-wa {
+  background: #25D366;
+  color: #074B20;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.btn-direct-wa:hover {
+  background: #1EBE5B;
+  color: white;
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4);
+}
+
+.wa-action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.qris-webhook-sim-box {
+  width: 100%;
+  margin: 6px 0 10px 0;
+}
+
+.btn-webhook-sim {
+  width: 100%;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px dashed rgba(59, 130, 246, 0.5);
+  color: #60A5FA;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.btn-webhook-sim:hover {
+  background: #2563EB;
+  color: white;
+}
+
+/* Customer Display Modal */
+.customer-display-backdrop {
+  z-index: 300;
+}
+
+.customer-display-container {
+  width: 90vw;
+  max-width: 1100px;
+  height: 85vh;
+  background: #120D22;
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), var(--shadow-primary);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: scaleIn 0.3s ease;
+}
+
+.cd-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border-card);
+}
+
+.cd-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cd-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+}
+
+.cd-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.cd-sub {
+  font-size: 12px;
   color: var(--text-muted);
 }
 
-.comp-row.highlight {
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  color: white;
+.cd-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cd-clock {
+  font-size: 14px;
+  color: var(--accent-gold);
   font-weight: 700;
+}
+
+.cd-close-btn {
+  font-size: 28px;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.cd-close-btn:hover { color: white; }
+
+.cd-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.cd-items-pane {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cd-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: var(--text-muted);
+}
+
+.cd-items-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cd-item-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cd-item-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.cd-item-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.cd-item-price {
+  font-size: 16px;
+  font-weight: 800;
+  color: white;
+}
+
+.cd-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  text-align: center;
+  gap: 10px;
+}
+
+.cd-empty-icon {
+  font-size: 56px;
+  opacity: 0.6;
+}
+
+.cd-summary-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cd-price-card {
+  background: rgba(232, 93, 117, 0.12);
+  border: 1px solid rgba(232, 93, 117, 0.35);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  text-align: center;
+}
+
+.cd-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.cd-total-price {
+  font-size: 42px;
+  font-weight: 900;
+  margin: 8px 0;
+}
+
+.cd-savings {
+  font-size: 14px;
+  color: var(--success);
+  font-weight: 700;
+}
+
+.cd-qris-box {
+  background: white;
+  border-radius: var(--radius-md);
+  padding: 20px;
+  color: #111;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  box-shadow: var(--shadow-md);
+}
+
+.cd-qris-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #991B1B;
+}
+
+.cd-qris-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #E85D75;
+}
+
+.cd-qris-status {
+  font-size: 10px;
+  color: #666;
+  font-weight: 600;
+}
+
+/* Predictive Urgencies */
+.urgency-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+}
+
+.urgency-badge.urgent {
+  background: rgba(239, 68, 68, 0.2);
+  color: #F87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.urgency-badge.warning {
+  background: rgba(245, 166, 35, 0.2);
+  color: #FBBF24;
+  border: 1px solid rgba(245, 166, 35, 0.4);
+}
+
+.urgency-badge.safe {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 /* ==========================================================================

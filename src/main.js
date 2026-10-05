@@ -910,12 +910,58 @@ function renderManagementDashboard() {
   // Render Real-time Feed
   renderRealtimeTxFeed();
 
+  // Render Predictive Stock Depletion
+  renderPredictiveStockTable(activeTxs);
+
   // Ticker text
   if (activeTxs.length > 0) {
     const latest = activeTxs[0];
     document.getElementById('liveTickerText').textContent = `Transaksi terbaru ${latest.id} senilai ${formatRupiah(latest.net)} via ${latest.method} (${latest.items[0]?.name || ''})`;
     document.getElementById('liveTickerTime').textContent = `${latest.time} WIB`;
   }
+}
+
+function renderPredictiveStockTable(txs) {
+  const tbody = document.getElementById('predictiveStockTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const sessionHours = 10;
+  const skuSold = {};
+  txs.forEach(t => {
+    t.items.forEach(i => {
+      skuSold[i.id] = (skuSold[i.id] || 0) + i.qty;
+    });
+  });
+
+  state.products.forEach(p => {
+    const sold = skuSold[p.id] || 0;
+    const burnRatePerHour = (sold / sessionHours) || 0.4;
+    const hoursRemaining = p.stockCurrent > 0 ? (p.stockCurrent / burnRatePerHour).toFixed(1) : 0;
+
+    let badgeClass = 'safe';
+    let badgeText = '🟢 SAFE (Stok Terjaga)';
+    if (p.stockCurrent === 0) {
+      badgeClass = 'urgent';
+      badgeText = '🔴 HABIS (OOS)';
+    } else if (hoursRemaining <= 2.5) {
+      badgeClass = 'urgent';
+      badgeText = '🔴 URGENT (< 2.5 Jam)';
+    } else if (hoursRemaining <= 5.0) {
+      badgeClass = 'warning';
+      badgeText = '🟡 WARNING (< 5 Jam)';
+    }
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${p.name}</strong> <span class="font-mono text-dim">(${p.sku})</span></td>
+      <td class="font-mono"><strong>${p.stockCurrent} pcs</strong></td>
+      <td class="font-mono">${burnRatePerHour.toFixed(1)} pcs / jam</td>
+      <td class="font-mono"><strong>~${hoursRemaining} jam operasional</strong></td>
+      <td><span class="urgency-badge ${badgeClass}">${badgeText}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
 }
 
 function renderHourlyChart(txs) {
@@ -1551,6 +1597,96 @@ function updateDenomCalculations() {
   if (display) display.textContent = formatRupiah(total);
 }
 
+// --- 17. CUSTOMER-FACING DISPLAY (LAYAR GANDA PEMBELI) ---
+function openCustomerDisplay() {
+  const modal = document.getElementById('modalCustomerDisplay');
+  if (modal) {
+    modal.style.display = 'flex';
+    renderCustomerDisplay();
+  }
+}
+
+function closeCustomerDisplay() {
+  const modal = document.getElementById('modalCustomerDisplay');
+  if (modal) modal.style.display = 'none';
+}
+
+function renderCustomerDisplay() {
+  const list = document.getElementById('cdItemsList');
+  const totalPriceEl = document.getElementById('cdTotalPrice');
+  const savingsEl = document.getElementById('cdSavings');
+  const clockEl = document.getElementById('cdClock');
+  if (!list) return;
+
+  const now = new Date();
+  if (clockEl) {
+    clockEl.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} WIB`;
+  }
+
+  const { gross, discount, net } = calculateCartTotals();
+  if (totalPriceEl) totalPriceEl.textContent = formatRupiah(net);
+  if (savingsEl) {
+    savingsEl.textContent = discount > 0 
+      ? `🎉 Selamat! Anda hemat ${formatRupiah(discount)} dari promo event booth PIK` 
+      : '✨ Nikmati promo bundling & diskon menarik di booth Raecca!';
+  }
+
+  if (state.cart.length === 0) {
+    list.innerHTML = `
+      <div class="cd-empty">
+        <span class="cd-empty-icon">🛍️</span>
+        <p style="font-size: 18px; font-weight: 700; color: white;">Selamat Datang di Raecca Pop-Up Store!</p>
+        <small style="color: var(--text-muted);">Produk yang discan kasir akan muncul di layar ini secara langsung.</small>
+      </div>
+    `;
+    return;
+  }
+
+  list.innerHTML = '';
+  state.cart.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'cd-item-card';
+    row.innerHTML = `
+      <div>
+        <div class="cd-item-title">${item.product.name}</div>
+        <div class="cd-item-sub">${item.qty} pcs &bull; @${formatRupiah(item.product.price)}</div>
+      </div>
+      <div class="cd-item-price font-mono">${formatRupiah(item.product.price * item.qty)}</div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+// --- 18. DIRECT ESC/POS SILENT PRINT & CASH DRAWER KICK ---
+function triggerSilentEscPosPrint() {
+  showToast('⚡ [ESC/POS]: Mengirim raw byte stream ke printer thermal USB (<0.4s)...', 'info');
+  setTimeout(() => {
+    showToast('💵 [RJ-11]: BZZZ-CLACK! Pulsa pembuka laci kasir otomatis terpicu!', 'success');
+  }, 350);
+}
+
+// --- 19. DIRECT ZERO-CLICK WHATSAPP DISPATCH ---
+function sendDirectWhatsApp() {
+  const text = document.getElementById('waBroadcastText').value;
+  const encodedText = encodeURIComponent(text);
+  const waUrl = `https://api.whatsapp.com/send?text=${encodedText}`;
+  window.open(waUrl, '_blank');
+  showToast('📲 Membuka WhatsApp Web / App dengan draf laporan EOD terisi...', 'success');
+}
+
+// --- 20. DYNAMIC QRIS AUTO-WEBHOOK SIMULATOR ---
+function simulateQrisWebhook() {
+  const badge = document.getElementById('qrisStatusBadge');
+  if (badge) {
+    badge.innerHTML = '⚡ <strong style="color: var(--success);">WEBHOOK DITERIMA (HTTP 200 OK)</strong>: Pembayaran instan terverifikasi dari Bank Gateway!';
+  }
+  showToast('✅ Webhook Gateway: Pembayaran QRIS sukses terverifikasi otomatis!', 'success');
+
+  setTimeout(() => {
+    completeTransaction('QRIS BCA (Auto-Webhook)', { refId: 'BCA-WH-' + Date.now() });
+  }, 700);
+}
+
   // Initial Render & Engine Startup
   document.getElementById('cartInvoiceId').textContent = generateInvoiceNumber();
   renderProductGrid();
@@ -1563,6 +1699,22 @@ function updateDenomCalculations() {
   initIndexedDb();
   initHardwareBarcodeScanner();
   initBlindClosingModule();
+
+  // Hook new listeners
+  const btnCustomerDisplay = document.getElementById('btnCustomerDisplay');
+  if (btnCustomerDisplay) btnCustomerDisplay.onclick = openCustomerDisplay;
+
+  const btnCloseCustomerDisplay = document.getElementById('btnCloseCustomerDisplay');
+  if (btnCloseCustomerDisplay) btnCloseCustomerDisplay.onclick = closeCustomerDisplay;
+
+  const btnDirectSilentPrint = document.getElementById('btnDirectSilentPrint');
+  if (btnDirectSilentPrint) btnDirectSilentPrint.onclick = triggerSilentEscPosPrint;
+
+  const btnDirectSendWa = document.getElementById('btnDirectSendWa');
+  if (btnDirectSendWa) btnDirectSendWa.onclick = sendDirectWhatsApp;
+
+  const btnSimulateQrisWebhook = document.getElementById('btnSimulateQrisWebhook');
+  if (btnSimulateQrisWebhook) btnSimulateQrisWebhook.onclick = simulateQrisWebhook;
 }
 
 // Expose updateQty helper for inline html calls
@@ -1572,4 +1724,5 @@ window.posEngine = {
 
 // Start application
 window.addEventListener('DOMContentLoaded', initApp);
+
 

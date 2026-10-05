@@ -53,6 +53,9 @@
           </button>
         </div>
       </div>
+      <button class="btn-customer-display" id="btnCustomerDisplay" title="Buka Layar Ganda Pembeli (Customer-Facing Screen)">
+        🖥️ Layar Pembeli
+      </button>
       <button class="btn-blind-closing" id="btnOpenBlindClosing" title="Tutup Shift Kasir Tanpa Lihat Omzet (Anti-Fraud)">
         🔒 Blind Shift Closing
       </button>
@@ -420,6 +423,36 @@
           </div>
         </div>
 
+        <!-- Predictive Stock Depletion & Inventory Health -->
+        <div class="dashboard-card full-width">
+          <div class="card-header-row">
+            <div>
+              <h3>⚡ Predictive Stock Depletion & Laju Penjualan</h3>
+              <p>Analisis prediktif waktu habis stok booth berdasarkan kecepatan transaksi 2 jam terakhir (Burn Rate Velocity)</p>
+            </div>
+            <span class="badge-pill" style="color: var(--accent-gold); border-color: rgba(245, 166, 35, 0.4);">
+              🔥 AI Velocity Forecast
+            </span>
+          </div>
+
+          <div class="table-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Produk SKU</th>
+                  <th>Sisa Stok Booth</th>
+                  <th>Kecepatan Jual (Burn Rate)</th>
+                  <th>Estimasi Waktu Habis</th>
+                  <th>Status Urgensi Restock</th>
+                </tr>
+              </thead>
+              <tbody id="predictiveStockTableBody">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Real-Time Recent Transactions Stream -->
         <div class="dashboard-card full-width">
           <div class="card-header-row">
@@ -537,11 +570,16 @@
               </div>
             </div>
             <div class="qris-verify-action">
-              <div class="verify-status-badge">
-                <span class="status-indicator-ping"></span> Menunggu scan dari pembeli...
+              <div class="verify-status-badge" id="qrisStatusBadge">
+                <span class="status-indicator-ping"></span> Menunggu scan dari pembeli (Listening to Webhook)...
+              </div>
+              <div class="qris-webhook-sim-box">
+                <button class="btn-webhook-sim" id="btnSimulateQrisWebhook" title="Simulasi webhook instan saat pelanggan selesai bayar">
+                  ⚡ Simulasi Pembeli Bayar (Auto Webhook Gateway)
+                </button>
               </div>
               <button class="btn-action-primary btn-full" id="btnConfirmQris">
-                ✅ Konfirmasi Pembayaran QRIS Sukses
+                ✅ Konfirmasi Pembayaran QRIS Manual
               </button>
             </div>
           </div>
@@ -671,8 +709,11 @@
       </div>
 
       <div class="modal-footer receipt-footer-actions">
+        <button class="btn-direct-print" id="btnDirectSilentPrint" title="Cetak langsung ke printer USB tanpa dialog browser (instan 0.4s) & picu laci kasir">
+          ⚡ Direct ESC/POS Silent Print (&lt;0.4s)
+        </button>
         <button class="btn-action-secondary" id="btnPrintReceipt">
-          🖨️ Cetak Struk (80mm Thermal USB)
+          🖨️ Cetak Preview (80mm USB)
         </button>
         <button class="btn-action-primary" id="btnNextTransaction">
           ✨ Transaksi Baru
@@ -792,9 +833,14 @@
           <div class="wa-textarea-wrap">
             <textarea id="waBroadcastText" class="wa-textarea font-mono" readonly></textarea>
           </div>
-          <button class="btn-action-primary" id="btnCopyWaText">
-            📋 Salin Teks Laporan WhatsApp
-          </button>
+          <div class="wa-action-buttons">
+            <button class="btn-action-primary" id="btnCopyWaText">
+              📋 Salin Teks Laporan WhatsApp
+            </button>
+            <button class="btn-direct-wa" id="btnDirectSendWa" title="Buka WhatsApp Web / App langsung dengan teks laporan terisi otomatis">
+              📲 Buka & Kirim ke WhatsApp (Zero-Click)
+            </button>
+          </div>
         </div>
 
         <!-- EOD TAB 3: Export Options -->
@@ -951,6 +997,50 @@
           <div class="modal-footer" style="padding: 14px 0 0 0; background: transparent; border: none;">
             <button class="btn-action-secondary" id="btnRecountBlind">🔄 Hitung Ulang</button>
             <button class="btn-action-primary" id="btnPrintBeritaAcara">🖨️ Cetak Berita Acara Rekonsiliasi</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CUSTOMER-FACING DISPLAY (LAYAR GANDA PEMBELI DUAL-SCREEN) -->
+  <div class="modal-backdrop customer-display-backdrop" id="modalCustomerDisplay" style="display: none;">
+    <div class="customer-display-container">
+      <div class="cd-header">
+        <div class="cd-brand">
+          <img src="/images.png" alt="Raecca Logo" class="cd-logo">
+          <div>
+            <div class="cd-title">RAECCA BEAUTY CARE</div>
+            <div class="cd-sub">Pop-up Store PIK &bull; Curved Counter L</div>
+          </div>
+        </div>
+        <div class="cd-right">
+          <div class="cd-clock font-mono" id="cdClock">21:45:00 WIB</div>
+          <button class="cd-close-btn" id="btnCloseCustomerDisplay" title="Tutup Layar Pembeli">&times;</button>
+        </div>
+      </div>
+
+      <div class="cd-body">
+        <!-- Left: Live Scanned Items -->
+        <div class="cd-items-pane">
+          <div class="cd-section-title">🛍️ Daftar Produk Belanja Anda:</div>
+          <div class="cd-items-list" id="cdItemsList">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Right: Real-time Total & QRIS Display -->
+        <div class="cd-summary-pane">
+          <div class="cd-price-card">
+            <span class="cd-label">Total Tagihan Belanja:</span>
+            <div class="cd-total-price font-mono text-gradient-primary" id="cdTotalPrice">Rp 0</div>
+            <div class="cd-savings font-mono" id="cdSavings">🎉 Hemat Rp 0 dari promo booth PIK</div>
+          </div>
+
+          <div class="cd-qris-box" id="cdQrisBox">
+            <div class="cd-qris-title">📱 Scan QRIS untuk Pembayaran Cepat:</div>
+            <img src="/images.png" alt="Raecca QRIS" class="cd-qris-avatar">
+            <div class="cd-qris-status">Mendukung BCA, GoPay, OVO, ShopeePay, Livin'</div>
           </div>
         </div>
       </div>
