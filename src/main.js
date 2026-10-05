@@ -1,3 +1,5 @@
+import '../index.css';
+
 /* ==========================================================================
    RAECCA POS & REPORTING ECOSYSTEM - MAIN APPLICATION ENGINE
    Curved Counter L, PIK Pop-up Store (Day 1 of 61)
