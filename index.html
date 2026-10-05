@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAECCA POS & Live Reporting Ecosystem - Curved Counter L, PIK</title>
+  <link rel="icon" type="image/png" href="/images.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/index.css">
+</head>
+<body class="app-body">
+  <!-- TOP APP BAR -->
+  <header class="app-header">
+    <div class="header-brand">
+      <img src="/images.png" alt="Raecca Beauty Care Logo" class="brand-logo-img">
+      <div>
+        <div class="brand-title">RAECCA <span class="brand-sub">BEAUTY POS</span></div>
+        <div class="brand-location">📍 Booth Curved Counter L &bull; PIK Pop-up Store (Day 1 of 61)</div>
+      </div>
+    </div>
+
+    <!-- Active Status Bar -->
+    <div class="header-center-info">
+      <div class="status-pill status-network online" id="networkPill" title="Klik untuk simulasi gangguan sinyal">
+        <span class="status-dot"></span>
+        <span id="networkStatusText">Dedicated 4G/5G Online</span>
+        <button class="toggle-net-btn" id="toggleNetworkBtn" title="Simulasi Offline/Online">Simulasi Sinyal</button>
+      </div>
+      <div class="status-pill status-shift">
+        <span class="icon">🕒</span>
+        <span id="liveClock">20:45:00 WIB</span>
+        <span class="shift-tag">Shift #1 (Clara - BA04)</span>
+      </div>
+    </div>
+
+    <!-- Role Switcher & Actions -->
+    <div class="header-right-controls">
+      <div class="role-selector">
+        <span class="role-label">Mode Akses:</span>
+        <div class="role-tabs">
+          <button class="role-tab-btn active" data-role="cashier" id="roleBtnCashier">
+            <span class="role-icon">👩‍💼</span> Kasir Front-End
+          </button>
+          <button class="role-tab-btn" data-role="supervisor" id="roleBtnSpv">
+            <span class="role-icon">🛡️</span> Supervisor
+          </button>
+          <button class="role-tab-btn" data-role="management" id="roleBtnOwner">
+            <span class="role-icon">👑</span> Dashboard Manajemen
+          </button>
+        </div>
+      </div>
+      <button class="btn-eod-quick" id="quickEodBtn" title="Buka Panel Laporan Closing 22.00 WIB">
+        📋 Daily Closing
+      </button>
+    </div>
+  </header>
+
+  <!-- OFFLINE SYNC NOTIFICATION BANNER -->
+  <aside class="offline-banner" id="offlineBanner" style="display: none;" aria-live="polite" aria-label="Notifikasi status jaringan offline">
+    <div class="offline-banner-content">
+      <span class="offline-icon">⚠️</span>
+      <div class="offline-text">
+        <strong>MODE OFFLINE AKTIF (Sinyal Seluler PIK Drop):</strong> Transaksi tetap tersimpan aman di penyimpanan lokal laptop kasir. 
+        <span id="pendingSyncCount">0</span> transaksi menunggu sinkronisasi ke cloud.
+      </div>
+      <button class="btn-sync-now" id="btnSyncNow">Sinkronkan ke Cloud Sekarang</button>
+    </div>
+  </aside>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="app-main" id="mainContainer">
+    <!-- VIEW 1: FRONT-END KASIR (POS TERMINAL) -->
+    <section class="view-panel active-view" id="viewCashier">
+      <div class="pos-layout">
+        <!-- LEFT: Product Catalog & Categories -->
+        <div class="pos-catalog-section">
+          <!-- Catalog Controls: Search, Scanner, Category Tabs -->
+          <div class="catalog-header-bar">
+            <div class="search-input-wrap">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="productSearchInput" class="search-input" placeholder="Cari nama produk, varian, atau ketik SKU barcode...">
+              <button class="btn-scan-sim" id="btnSimulateScan" title="Simulasi Barcode Scanner USB">
+                📷 Scan Barcode
+              </button>
+            </div>
+            
+            <div class="category-tabs" id="categoryTabs">
+              <button class="cat-tab active" data-cat="all">Semua Produk (9)</button>
+              <button class="cat-tab" data-cat="lip">Lip Care & Tint</button>
+              <button class="cat-tab" data-cat="skincare">Skincare & Mask</button>
+              <button class="cat-tab" data-cat="body">Body & Glow</button>
+              <button class="cat-tab" data-cat="bundle">🔥 Special Event Bundle</button>
+            </div>
+          </div>
+
+          <!-- Product Grid -->
+          <div class="product-grid" id="productGrid">
+            <!-- Rendered dynamically by JS -->
+          </div>
+        </div>
+
+        <!-- RIGHT: Current Bill / Order Cart -->
+        <div class="pos-cart-section">
+          <div class="cart-header">
+            <div class="cart-title-row">
+              <h2>Keranjang Transaksi</h2>
+              <span class="cart-inv-id" id="cartInvoiceId">#RC-261005-0012</span>
+            </div>
+            <div class="cart-sub-row">
+              <span>Kasir: <strong>Clara (BA-04)</strong></span>
+              <span class="cart-counter-badge" id="cartItemCountBadge">0 item</span>
+            </div>
+          </div>
+
+          <!-- Cart Items Container -->
+          <div class="cart-items-list" id="cartItemsList">
+            <div class="cart-empty-state" id="cartEmptyState">
+              <div class="empty-icon">🛍️</div>
+              <p>Belum ada produk dipilih</p>
+              <small>Klik produk di sebelah kiri atau gunakan pemindai barcode USB untuk memulai transaksi.</small>
+            </div>
+          </div>
+
+          <!-- Promo & Voucher Indicator -->
+          <div class="cart-promo-box" id="cartPromoBox">
+            <div class="promo-box-header">
+              <span class="promo-tag-icon">🏷️</span>
+              <span class="promo-title">Otomasi Diskon Event Pop-Up PIK</span>
+            </div>
+            <div class="promo-desc" id="promoDescText">Beli bundling diskon hingga Rp 21.000 otomatis aktif!</div>
+          </div>
+
+          <!-- Cart Summary Breakdown -->
+          <div class="cart-summary">
+            <div class="summary-line">
+              <span>Subtotal Kotor</span>
+              <span id="summaryGross" class="font-mono">Rp 0</span>
+            </div>
+            <div class="summary-line text-discount">
+              <span>Potongan Promo / Bundling</span>
+              <span id="summaryDiscount" class="font-mono">- Rp 0</span>
+            </div>
+            <div class="summary-line total-line">
+              <span>TOTAL BERSIH</span>
+              <span id="summaryNet" class="font-mono text-gradient-primary">Rp 0</span>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="cart-actions">
+            <button class="btn-cart-action btn-hold" id="btnHoldBill">
+              ⏸️ Tahan Struk
+            </button>
+            <button class="btn-cart-action btn-clear" id="btnClearCart">
+              🗑️ Batalkan
+            </button>
+            <button class="btn-cart-action btn-pay" id="btnPayCheckout" disabled>
+              💳 PROSES BAYAR (<span id="btnPayAmount">Rp 0</span>)
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: SUPERVISOR & AUDIT LOG PANEL -->
+    <section class="view-panel" id="viewSupervisor">
+      <div class="spv-layout">
+        <div class="spv-sidebar">
+          <div class="spv-profile-card">
+            <div class="spv-avatar">🛡️</div>
+            <div>
+              <h3>Supervisor Booth PIK</h3>
+              <p>Otoritas: Level 2 (Team Leader)</p>
+            </div>
+          </div>
+          <div class="spv-nav-menu">
+            <button class="spv-nav-btn active" data-spv-tab="voidLog">📜 Logbook Void & Retur</button>
+            <button class="spv-nav-btn" data-spv-tab="stockOpname">📦 Stock Opname Booth</button>
+            <button class="spv-nav-btn" data-spv-tab="spvSettings">⚙️ Pengaturan PIN & Akses</button>
+          </div>
+        </div>
+
+        <div class="spv-content">
+          <!-- SUB-TAB 1: Void & Retur Logbook -->
+          <div class="spv-tab-pane active" id="spvPaneVoidLog">
+            <div class="pane-header">
+              <div>
+                <h2>Buku Register Digital: Void & Retur Transaksi</h2>
+                <p>Seluruh pembatalan nota wajib diotorisasi PIN Supervisor dan dicatat dalam audit trail resmi.</p>
+              </div>
+              <button class="btn-action-primary" id="btnManualVoidModal">
+                ➕ Manual Void Override
+              </button>
+            </div>
+
+            <div class="table-card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Waktu</th>
+                    <th>No. Transaksi</th>
+                    <th>Item Dibatalkan</th>
+                    <th>Nominal</th>
+                    <th>Kasir</th>
+                    <th>Supervisor</th>
+                    <th>Alasan Void</th>
+                    <th>Status Fisik Struk</th>
+                  </tr>
+                </thead>
+                <tbody id="voidLogTableBody">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SUB-TAB 2: Stock Opname Booth -->
+          <div class="spv-tab-pane" id="spvPaneStockOpname">
+            <div class="pane-header">
+              <div>
+                <h2>Stock Opname & Verifikasi Stok Fisik Booth</h2>
+                <p>Pencocokan stok riil Curved Counter L dengan sistem POS sebelum tutup shift.</p>
+              </div>
+              <button class="btn-action-primary" id="btnSaveStockOpname">
+                💾 Simpan Opname & Request Restock
+              </button>
+            </div>
+
+            <div class="table-card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>SKU Barcode</th>
+                    <th>Nama Produk</th>
+                    <th>Stok Awal</th>
+                    <th>Terjual Hari Ini</th>
+                    <th>Stok Sistem</th>
+                    <th>Stok Fisik Riil</th>
+                    <th>Selisih (Variance)</th>
+                    <th>Request Restock Besok (Pcs)</th>
+                  </tr>
+                </thead>
+                <tbody id="stockOpnameTableBody">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SUB-TAB 3: Pengaturan PIN -->
+          <div class="spv-tab-pane" id="spvPaneSettings">
+            <div class="pane-header">
+              <div>
+                <h2>Pengaturan Otorisasi Keamanan</h2>
+                <p>Konfigurasi otentikasi kasir & supervisor di booth PIK.</p>
+              </div>
+            </div>
+            <div class="settings-card">
+              <div class="form-group">
+                <label>PIN Supervisor Saat Ini</label>
+                <div class="pin-display">
+                  <span class="pin-masked">••••</span>
+                  <span class="badge-hint">(Default Uji Coba: <strong>1234</strong>)</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Mode Pembatasan Kasir (Front-End Lockdown)</label>
+                <p class="setting-desc">Mencegah SPG/BA mengubah harga secara manual, mematikan riwayat transaksi, atau mengubah stok tanpa izin.</p>
+                <span class="badge-active">🔒 Strict Lockdown Aktif (Compliant with Blueprint)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: MANAJEMEN RAECCA (LIVE MONITORING & CLOUD ANALYTICS) -->
+    <section class="view-panel" id="viewManagement">
+      <div class="mgmt-dashboard">
+        <!-- Live Alert Banner -->
+        <div class="mgmt-live-ticker">
+          <div class="ticker-dot"></div>
+          <span class="ticker-label">LIVE STREAMING RAECCA BOOTH PIK:</span>
+          <span class="ticker-text" id="liveTickerText">Sistem POS beroperasi normal. Menunggu transaksi berikutnya...</span>
+          <span class="ticker-timestamp" id="liveTickerTime">20:45:00 WIB</span>
+        </div>
+
+        <!-- Metric KPI Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card card-sales">
+            <div class="kpi-header">
+              <span class="kpi-title">TOTAL OMZET BERSIH (NET)</span>
+              <span class="kpi-badge">Hari Ini</span>
+            </div>
+            <div class="kpi-value text-gradient-primary" id="kpiNetSales">Rp 0</div>
+            <div class="kpi-sub">
+              <span>Gross: <strong id="kpiGrossSales">Rp 0</strong></span> &bull; 
+              <span>Diskon: <strong id="kpiDiscount">Rp 0</strong></span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">TRANSAKSI & BASKET SIZE</span>
+              <span class="kpi-icon">🧾</span>
+            </div>
+            <div class="kpi-value" id="kpiTxCount">0 <small>Nota</small></div>
+            <div class="kpi-sub">
+              <span>Avg Basket: <strong id="kpiAvgBasket">Rp 0</strong></span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">PAYMENT MIX (NON-TUNAI)</span>
+              <span class="kpi-icon">💳</span>
+            </div>
+            <div class="kpi-value" id="kpiCashlessRatio">0%</div>
+            <div class="kpi-sub">
+              <span>QRIS: <strong id="kpiQrisTotal">Rp 0</strong></span> &bull; 
+              <span>EDC: <strong id="kpiEdcTotal">Rp 0</strong></span>
+            </div>
+          </div>
+
+          <div class="kpi-card card-stock">
+            <div class="kpi-header">
+              <span class="kpi-title">TOTAL UNIT TERJUAL</span>
+              <span class="kpi-icon">📦</span>
+            </div>
+            <div class="kpi-value" id="kpiUnitSold">0 <small>pcs</small></div>
+            <div class="kpi-sub">
+              <span id="kpiStockAlertText" class="text-success">Semua stok display booth aman</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts & Breakdown Section -->
+        <div class="mgmt-grid-row">
+          <!-- Left: Hourly Sales & Peak Hour Bar Chart -->
+          <div class="dashboard-card">
+            <div class="card-header-row">
+              <div>
+                <h3>Grafik Penjualan per Jam & Peak Hours</h3>
+                <p>Distribusi traffic transaksi di booth Curved Counter L (10.00 - 22.00 WIB)</p>
+              </div>
+              <span class="badge-pill">Mall Peak: 14:00 & 19:00</span>
+            </div>
+            <div class="hourly-chart-container" id="hourlyChartContainer">
+              <!-- Rendered via CSS/JS bars -->
+            </div>
+          </div>
+
+          <!-- Right: Payment Method Breakdown & Fast Moving SKU -->
+          <div class="dashboard-card">
+            <div class="card-header-row">
+              <div>
+                <h3>Metode Pembayaran & Hero SKU</h3>
+                <p>Rincian Cash vs QRIS vs EDC dan produk terlaris hari ini</p>
+              </div>
+            </div>
+
+            <!-- Payment Progress Bars -->
+            <div class="payment-ratio-wrap">
+              <div class="payment-stat-row">
+                <span>QRIS Dinamis / Statis</span>
+                <span class="font-mono" id="payRatioQrisText">Rp 0 (0%)</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill fill-qris" id="barQris" style="width: 0%"></div>
+              </div>
+
+              <div class="payment-stat-row">
+                <span>Mesin EDC (Debit / Kredit)</span>
+                <span class="font-mono" id="payRatioEdcText">Rp 0 (0%)</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill fill-edc" id="barEdc" style="width: 0%"></div>
+              </div>
+
+              <div class="payment-stat-row">
+                <span>Uang Tunai (Cash)</span>
+                <span class="font-mono" id="payRatioCashText">Rp 0 (0%)</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill fill-cash" id="barCash" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div class="fast-moving-section">
+              <h4>🔥 Top 3 Fast-Moving Products</h4>
+              <div class="fast-moving-list" id="fastMovingList">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Real-Time Recent Transactions Stream -->
+        <div class="dashboard-card full-width">
+          <div class="card-header-row">
+            <div>
+              <h3>Feed Transaksi Real-Time</h3>
+              <p>Audit trail transaksi langsung terenkripsi dari POS laptop kasir</p>
+            </div>
+            <button class="btn-refresh" id="btnRefreshFeed">🔄 Refresh Feed</button>
+          </div>
+
+          <div class="table-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>No. Invoice</th>
+                  <th>Waktu</th>
+                  <th>Kasir</th>
+                  <th>Item Terjual</th>
+                  <th>Metode Bayar</th>
+                  <th>Diskon</th>
+                  <th>Total Bersih</th>
+                  <th>Status Sync</th>
+                </tr>
+              </thead>
+              <tbody id="realtimeTxTableBody">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL: PAYMENT CHECKOUT (QRIS / EDC / CASH) -->
+  <div class="modal-backdrop" id="modalPayment" style="display: none;">
+    <div class="modal-box modal-payment-box">
+      <div class="modal-header">
+        <div>
+          <h3>Pilih Pembayaran Transaksi</h3>
+          <p class="modal-sub" id="payModalInvoice">Invoice: #RC-261005-0012</p>
+        </div>
+        <button class="modal-close-btn" id="btnClosePayModal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="pay-total-display">
+          <span class="pay-label">Total Tagihan Pelanggan:</span>
+          <span class="pay-amount font-mono" id="payModalTotalText">Rp 0</span>
+        </div>
+
+        <!-- Payment Method Tabs -->
+        <div class="pay-method-tabs">
+          <button class="pay-tab-btn active" data-method="qris" id="payTabQris">
+            📱 Standing QRIS
+          </button>
+          <button class="pay-tab-btn" data-method="edc" id="payTabEdc">
+            💳 Mesin EDC Bank
+          </button>
+          <button class="pay-tab-btn" data-method="cash" id="payTabCash">
+            💵 Uang Tunai (Cash)
+          </button>
+        </div>
+
+        <!-- PAY METHOD 1: QRIS -->
+        <div class="pay-method-content active" id="payPaneQris">
+          <div class="qris-interactive-box">
+            <div class="qris-card">
+              <div class="qris-header">
+                <div class="qris-brand-row">
+                  <img src="/images.png" alt="Raecca Logo" class="qris-logo-img">
+                  <div>
+                    <strong>QRIS</strong>
+                    <small>PEMBAYARAN DIGITAL RAECCA</small>
+                  </div>
+                </div>
+              </div>
+              <div class="qris-code-visual">
+                <!-- SVG Stylized Authentic QR Code -->
+                <svg viewBox="0 0 120 120" class="qr-svg" width="130" height="130">
+                  <rect width="120" height="120" fill="white" />
+                  <!-- QR Finder patterns -->
+                  <rect x="10" y="10" width="30" height="30" fill="black" />
+                  <rect x="15" y="15" width="20" height="20" fill="white" />
+                  <rect x="20" y="20" width="10" height="10" fill="black" />
+
+                  <rect x="80" y="10" width="30" height="30" fill="black" />
+                  <rect x="85" y="15" width="20" height="20" fill="white" />
+                  <rect x="90" y="20" width="10" height="10" fill="black" />
+
+                  <rect x="10" y="80" width="30" height="30" fill="black" />
+                  <rect x="15" y="85" width="20" height="20" fill="white" />
+                  <rect x="20" y="90" width="10" height="10" fill="black" />
+
+                  <!-- Random QR pixel data simulation -->
+                  <rect x="45" y="15" width="5" height="15" fill="black" />
+                  <rect x="55" y="10" width="15" height="5" fill="black" />
+                  <rect x="45" y="35" width="25" height="5" fill="black" />
+                  <rect x="15" y="50" width="15" height="5" fill="black" />
+                  <rect x="35" y="55" width="5" height="15" fill="black" />
+                  <rect x="50" y="50" width="20" height="20" fill="#E85D75" />
+                  <text x="54" y="65" font-size="12" fill="white" font-weight="bold">R</text>
+                  <rect x="80" y="50" width="10" height="5" fill="black" />
+                  <rect x="95" y="55" width="15" height="5" fill="black" />
+                  <rect x="50" y="80" width="25" height="5" fill="black" />
+                  <rect x="80" y="80" width="15" height="15" fill="black" />
+                  <rect x="85" y="85" width="5" height="5" fill="white" />
+                  <rect x="100" y="100" width="10" height="10" fill="black" />
+                  <rect x="50" y="95" width="15" height="10" fill="black" />
+                </svg>
+              </div>
+              <div class="qris-instruction">
+                <p>Scan menggunakan BCA Mobile / GoPay / OVO / ShopeePay / Livin'</p>
+                <div class="qris-nm">NMID: ID1020261005RAECCA01</div>
+              </div>
+            </div>
+            <div class="qris-verify-action">
+              <div class="verify-status-badge">
+                <span class="status-indicator-ping"></span> Menunggu scan dari pembeli...
+              </div>
+              <button class="btn-action-primary btn-full" id="btnConfirmQris">
+                ✅ Konfirmasi Pembayaran QRIS Sukses
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAY METHOD 2: EDC -->
+        <div class="pay-method-content" id="payPaneEdc">
+          <div class="edc-form">
+            <div class="form-group">
+              <label>Pilih Mesin EDC / Bank Acquirer</label>
+              <select id="edcBankSelect" class="form-input">
+                <option value="BCA">EDC BCA (Debit / Credit Visa / MC)</option>
+                <option value="Mandiri">EDC Mandiri Merchant</option>
+                <option value="BRI">EDC BRI Merchant</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Nomor Referensi / Approval Code EDC (Struk Mesin)</label>
+              <input type="text" id="edcApprovalCode" class="form-input font-mono" placeholder="Contoh: 489201" maxlength="12">
+              <small>Wajib dicocokkan dengan struk yang keluar dari mesin EDC.</small>
+            </div>
+            <button class="btn-action-primary btn-full" id="btnConfirmEdc">
+              ✅ Konfirmasi EDC Approved & Selesai
+            </button>
+          </div>
+        </div>
+
+        <!-- PAY METHOD 3: CASH -->
+        <div class="pay-method-content" id="payPaneCash">
+          <div class="cash-calc-box">
+            <div class="form-group">
+              <label>Nominal Uang Diterima dari Pelanggan</label>
+              <div class="cash-input-wrap">
+                <span class="currency-prefix">Rp</span>
+                <input type="number" id="cashTenderedInput" class="form-input font-mono cash-input" placeholder="0">
+              </div>
+            </div>
+
+            <!-- Quick Cash Buttons -->
+            <div class="quick-cash-row">
+              <button class="btn-quick-cash" id="btnCashExact">Uang Pas</button>
+              <button class="btn-quick-cash" data-val="50000">Rp 50.000</button>
+              <button class="btn-quick-cash" data-val="100000">Rp 100.000</button>
+              <button class="btn-quick-cash" data-val="200000">Rp 200.000</button>
+            </div>
+
+            <!-- Change Return Calculation -->
+            <div class="change-display-card">
+              <span>Kembalian ke Pelanggan:</span>
+              <span class="change-amount font-mono" id="cashChangeDisplay">Rp 0</span>
+            </div>
+
+            <button class="btn-action-primary btn-full" id="btnConfirmCash">
+              ✅ Selesaikan Pembayaran Tunai
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: THERMAL RECEIPT 80MM (STRUK FISIK) -->
+  <div class="modal-backdrop" id="modalReceipt" style="display: none;">
+    <div class="modal-box modal-receipt-box">
+      <div class="modal-header">
+        <h3>Struk Resmi Transaksi Kasir</h3>
+        <button class="modal-close-btn" id="btnCloseReceiptModal">&times;</button>
+      </div>
+
+      <div class="modal-body receipt-modal-body">
+        <!-- 80mm Physical Thermal Paper Simulation -->
+        <div class="thermal-paper-container" id="printableReceipt">
+          <div class="receipt-paper">
+            <div class="receipt-cut-edge top"></div>
+            
+            <div class="receipt-content">
+              <div class="receipt-header">
+                <img src="/images.png" alt="Raecca Logo" class="receipt-logo-img">
+                <div class="receipt-logo">RAECCA</div>
+                <div class="receipt-brand-tag">BEAUTY OFFICIAL STORE</div>
+                <div class="receipt-address">
+                  Pop-up Store PIK - Curved Counter L<br>
+                  Pantai Indah Kapuk, Jakarta Utara<br>
+                  Telp: +62 811-RAECCA-ID
+                </div>
+              </div>
+
+              <div class="receipt-divider">================================</div>
+
+              <div class="receipt-meta">
+                <div class="meta-row"><span>No. Struk</span><span id="rcptInv" class="font-mono">#RC-261005-0012</span></div>
+                <div class="meta-row"><span>Tanggal</span><span id="rcptDate">05/10/2026 20:45</span></div>
+                <div class="meta-row"><span>Kasir</span><span id="rcptCashier">Clara (BA-04)</span></div>
+                <div class="meta-row"><span>Mode Transaksi</span><span id="rcptMode">ONLINE SYNC</span></div>
+              </div>
+
+              <div class="receipt-divider">--------------------------------</div>
+
+              <div class="receipt-items-table" id="rcptItemsTable">
+                <!-- Injected via JS -->
+              </div>
+
+              <div class="receipt-divider">--------------------------------</div>
+
+              <div class="receipt-calc">
+                <div class="calc-row"><span>Subtotal Kotor</span><span id="rcptGross" class="font-mono">Rp 0</span></div>
+                <div class="calc-row"><span>Diskon Event</span><span id="rcptDiscount" class="font-mono">- Rp 0</span></div>
+                <div class="calc-row total"><span>TOTAL BERSIH</span><span id="rcptNet" class="font-mono">Rp 0</span></div>
+                <div class="calc-row"><span>Metode Bayar</span><span id="rcptPaymentMethod">QRIS BCA</span></div>
+                <div class="calc-row"><span>Bayar Diterima</span><span id="rcptTendered" class="font-mono">Rp 0</span></div>
+                <div class="calc-row"><span>Kembalian</span><span id="rcptChange" class="font-mono">Rp 0</span></div>
+              </div>
+
+              <div class="receipt-divider">================================</div>
+
+              <div class="receipt-footer">
+                <p>Terima kasih telah berbelanja di Raecca!</p>
+                <p>Follow Instagram & TikTok: @raeccaid</p>
+                <small>Barang yang sudah dibeli hanya dapat ditukar dalam 1x24 jam dengan membawa struk fisik asli dan persetujuan SPV.</small>
+                <div class="receipt-barcode-code font-mono" id="rcptBarcode">|||||| |||||||| |||||||| |||||</div>
+              </div>
+            </div>
+
+            <div class="receipt-cut-edge bottom"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer receipt-footer-actions">
+        <button class="btn-action-secondary" id="btnPrintReceipt">
+          🖨️ Cetak Struk (80mm Thermal USB)
+        </button>
+        <button class="btn-action-primary" id="btnNextTransaction">
+          ✨ Transaksi Baru
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SUPERVISOR PIN OVERRIDE (VOID / RETUR) -->
+  <div class="modal-backdrop" id="modalSupervisorPin" style="display: none;">
+    <div class="modal-box modal-pin-box">
+      <div class="modal-header">
+        <div>
+          <h3>🛡️ Otorisasi PIN Supervisor</h3>
+          <p class="modal-sub">Diperlukan otorisasi Level 2 untuk membatalkan (Void) transaksi</p>
+        </div>
+        <button class="modal-close-btn" id="btnClosePinModal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Pilih Transaksi yang akan di-Void</label>
+          <select id="voidTxSelect" class="form-input font-mono">
+            <!-- Populated via JS -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Alasan Pembatalan / Void</label>
+          <select id="voidReasonSelect" class="form-input">
+            <option value="Salah input item oleh BA">Salah input item oleh BA</option>
+            <option value="Pelanggan ingin ganti varian shade">Pelanggan ingin ganti varian shade</option>
+            <option value="Transaksi pembayaran QRIS/EDC gagal/timeout">Transaksi pembayaran QRIS/EDC gagal/timeout</option>
+            <option value="Pelanggan membatalkan transaksi belanja">Pelanggan membatalkan transaksi belanja</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Masukkan 4-Digit PIN Supervisor</label>
+          <input type="password" id="supervisorPinInput" class="form-input pin-input font-mono" maxlength="4" placeholder="••••" autocomplete="off">
+          <small class="text-danger" id="pinErrorText" style="display: none;">❌ PIN salah! Silakan masukkan PIN Team Leader yang valid.</small>
+          <small class="badge-hint">(Hint Pengujian: PIN default adalah <strong>1234</strong>)</small>
+        </div>
+
+        <div class="spv-warning-box">
+          ⚠️ <strong>PERINGATAN AUDIT:</strong> Struk fisik asli wajib ditarik kembali, distempel "VOID", dan distaples pada buku logbook kasir.
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-action-secondary" id="btnCancelVoid">Batal</button>
+        <button class="btn-action-danger" id="btnSubmitVoid">
+          🛡️ Konfirmasi Otorisasi Void
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: DAILY CLOSING REPORT (EOD 22.00 WIB GENERATOR) -->
+  <div class="modal-backdrop" id="modalEodReport" style="display: none;">
+    <div class="modal-box modal-eod-box">
+      <div class="modal-header">
+        <div>
+          <h3>📋 Laporan Harian Closing (EOD 22.00 WIB)</h3>
+          <p class="modal-sub">Booth Raecca Curved Counter L &bull; Cut-Off Pukul 22.00 & Broadcast 22.30 WIB</p>
+        </div>
+        <button class="modal-close-btn" id="btnCloseEodModal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="eod-tabs">
+          <button class="eod-tab-btn active" data-eod-tab="preview">📄 Ringkasan Penutupan</button>
+          <button class="eod-tab-btn" data-eod-tab="whatsapp">💬 Format WhatsApp Broadcast</button>
+          <button class="eod-tab-btn" data-eod-tab="export">📊 Export Data (Excel & PDF)</button>
+        </div>
+
+        <!-- EOD TAB 1: Preview Ringkasan -->
+        <div class="eod-tab-pane active" id="eodPanePreview">
+          <div class="eod-summary-cards">
+            <div class="eod-stat-box">
+              <span class="label">Total Omzet Bersih:</span>
+              <strong id="eodNetSales" class="font-mono text-gradient-primary">Rp 0</strong>
+            </div>
+            <div class="eod-stat-box">
+              <span class="label">Total Transaksi:</span>
+              <strong id="eodTxTotal">0 Nota</strong>
+            </div>
+            <div class="eod-stat-box">
+              <span class="label">Status Selisih Kasir:</span>
+              <strong id="eodCashVariance" class="text-success font-mono">Rp 0 (Balanced)</strong>
+            </div>
+          </div>
+
+          <div class="eod-section-title">Rekonsiliasi Kanal Pembayaran:</div>
+          <div class="eod-table-mini">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Kanal Bayar</th>
+                  <th>Jumlah Nota</th>
+                  <th>Nominal Tercatat</th>
+                  <th>Status Verifikasi</th>
+                </tr>
+              </thead>
+              <tbody id="eodReconciliationBody">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- EOD TAB 2: WhatsApp Broadcast Template -->
+        <div class="eod-tab-pane" id="eodPaneWhatsapp">
+          <div class="wa-helper-text">
+            Format laporan siap kirim ke WhatsApp Group Koordinasi Manajemen Raecca:
+          </div>
+          <div class="wa-textarea-wrap">
+            <textarea id="waBroadcastText" class="wa-textarea font-mono" readonly></textarea>
+          </div>
+          <button class="btn-action-primary" id="btnCopyWaText">
+            📋 Salin Teks Laporan WhatsApp
+          </button>
+        </div>
+
+        <!-- EOD TAB 3: Export Options -->
+        <div class="eod-tab-pane" id="eodPaneExport">
+          <div class="export-options-grid">
+            <div class="export-card">
+              <div class="export-icon">📑</div>
+              <h4>Download Laporan Excel / CSV</h4>
+              <p>Berisi rincian baris per transaksi, SKU terjual, dan rekap closing shift.</p>
+              <button class="btn-action-secondary" id="btnExportCsv">
+                📥 Unduh Format CSV / Excel
+              </button>
+            </div>
+            <div class="export-card">
+              <div class="export-icon">🖨️</div>
+              <h4>Cetak PDF Lembar Closing Harian</h4>
+              <p>Format dokumen tanda tangan serah terima fisik antara Kasir, SPV, dan Tim Raecca.</p>
+              <button class="btn-action-primary" id="btnPrintEodSheet">
+                🖨️ Cetak Lembar EOD PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
