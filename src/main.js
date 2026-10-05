@@ -1925,12 +1925,16 @@ function initApp() {
 
   // Hook Customer Display buttons
   const btnCustomerDisplay = document.getElementById('btnCustomerDisplay');
-  if (btnCustomerDisplay) btnCustomerDisplay.onclick = openCustomerPopoutWindow;
+  if (btnCustomerDisplay) {
+    btnCustomerDisplay.onclick = () => {
+      broadcastCustomerDisplay('CART_UPDATE');
+    };
+  }
 
   const btnPopoutCustomerWindow = document.getElementById('btnPopoutCustomerWindow');
   if (btnPopoutCustomerWindow) {
     btnPopoutCustomerWindow.onclick = () => {
-      openCustomerPopoutWindow();
+      broadcastCustomerDisplay('CART_UPDATE');
       closeCustomerDisplay();
     };
   }
